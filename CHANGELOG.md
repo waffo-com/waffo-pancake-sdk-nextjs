@@ -12,3 +12,4 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 - **`useCheckout()`** — React hook for programmatic checkout flow. Returns `{ checkout, isLoading, error }`. Same popup blocker avoidance.
 - **Two navigation modes** — `mode="redirect"` (default): `window.location.href` navigation. `mode="popup"`: opens a new window with a loading page, then navigates to checkout URL.
 - **`Webhook()`** — Next.js route handler factory for webhook signature verification. Auto-dispatches to event-specific handlers (`onOrderCompleted`, `onSubscriptionActivated`, `onRefundSucceeded`, etc.). Supports catch-all `onPayload` handler.
+- **`useBuyer()`** — React hook for buyer self-service. Wraps `client.buyer(token)` with per-action loading/error/data state: `cancelSubscription`, `cancelOnetimeOrder`, `reactivateSubscription`, `createRefundTicket`, `resubmitRefundTicket`, `query` (GraphQL).
