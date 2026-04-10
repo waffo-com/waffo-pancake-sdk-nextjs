@@ -69,5 +69,13 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/waffo-com/waffo-pancake-sdk-nextjs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/waffo-com/waffo-pancake-sdk-nextjs/issues"
+  },
+  "homepage": "https://github.com/waffo-com/waffo-pancake-sdk-nextjs#readme"
 }
