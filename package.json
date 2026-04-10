@@ -32,8 +32,10 @@
     "prepare": "husky",
     "prepublishOnly": "npm run lint && npm run test && npm run build"
   },
+  "dependencies": {
+    "@waffo/pancake-ts": "^0.3.2"
+  },
   "peerDependencies": {
-    "@waffo/pancake-ts": ">=0.3.0",
     "next": ">=14.0.0",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0"
@@ -46,7 +48,6 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitest/coverage-v8": "^4.0.18",
-    "@waffo/pancake-ts": "^0.3.2",
     "eslint": "^9",
     "eslint-plugin-react-hooks": "^5.2.0",
     "husky": "^9.1.7",
