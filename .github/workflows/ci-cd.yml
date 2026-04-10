@@ -16,7 +16,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [20, 22, 24]
+        node-version: ["20.19.0", "22.16.0", "24.12.0"]
 
     steps:
       - uses: actions/checkout@v4
@@ -39,10 +39,14 @@ jobs:
 
       - name: Verify dist output
         run: |
-          test -f dist/index.js || (echo "Missing ESM output" && exit 1)
-          test -f dist/index.cjs || (echo "Missing CJS output" && exit 1)
-          test -f dist/index.d.ts || (echo "Missing type declarations" && exit 1)
-          test -f dist/index.d.cts || (echo "Missing CJS type declarations" && exit 1)
+          test -f dist/index.js || (echo "Missing client ESM output" && exit 1)
+          test -f dist/index.cjs || (echo "Missing client CJS output" && exit 1)
+          test -f dist/index.d.ts || (echo "Missing client type declarations" && exit 1)
+          test -f dist/index.d.cts || (echo "Missing client CJS type declarations" && exit 1)
+          test -f dist/server.js || (echo "Missing server ESM output" && exit 1)
+          test -f dist/server.cjs || (echo "Missing server CJS output" && exit 1)
+          test -f dist/server.d.ts || (echo "Missing server type declarations" && exit 1)
+          test -f dist/server.d.cts || (echo "Missing server CJS type declarations" && exit 1)
 
   publish:
     needs: ci
@@ -54,7 +58,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "24.12.0"
           registry-url: https://registry.npmjs.org
           cache: npm
 
