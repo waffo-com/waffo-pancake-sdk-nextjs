@@ -35,6 +35,7 @@ export interface WebhookConfig {
   onRefundFailed?: EventHandler;
 }
 
+// eslint-disable-next-line @typescript-eslint/naming-convention -- event type keys use dot notation
 const EVENT_HANDLER_MAP: Record<string, keyof WebhookConfig> = {
   "order.completed": "onOrderCompleted",
   "subscription.activated": "onSubscriptionActivated",
