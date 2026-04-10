@@ -9,6 +9,7 @@ vi.mock("@waffo/pancake-ts", () => ({
   verifyWebhook: vi.fn(),
 }));
 
+// eslint-disable-next-line import/order -- must import after vi.mock() for mock to take effect
 import { verifyWebhook } from "@waffo/pancake-ts";
 
 const mockVerify = vi.mocked(verifyWebhook);
@@ -36,7 +37,7 @@ describe("Webhook", () => {
     });
 
     const handler = Webhook({});
-    const response = await handler(createRequest('{}') as never);
+    const response = await handler(createRequest("{}") as never);
 
     expect(response.status).toBe(401);
     const body = await response.json();
@@ -47,7 +48,7 @@ describe("Webhook", () => {
     mockVerify.mockReturnValue({ eventType: "order.completed", data: {} } as never);
 
     const handler = Webhook({});
-    const response = await handler(createRequest('{}') as never);
+    const response = await handler(createRequest("{}") as never);
 
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -60,7 +61,7 @@ describe("Webhook", () => {
 
     const onPayload = vi.fn();
     const handler = Webhook({ onPayload });
-    await handler(createRequest('{}') as never);
+    await handler(createRequest("{}") as never);
 
     expect(onPayload).toHaveBeenCalledWith(event);
   });
@@ -71,7 +72,7 @@ describe("Webhook", () => {
 
     const onOrderCompleted = vi.fn();
     const handler = Webhook({ onOrderCompleted });
-    await handler(createRequest('{}') as never);
+    await handler(createRequest("{}") as never);
 
     expect(onOrderCompleted).toHaveBeenCalledWith(event);
   });
@@ -83,7 +84,7 @@ describe("Webhook", () => {
     const onPayload = vi.fn();
     const onSubscriptionActivated = vi.fn();
     const handler = Webhook({ onPayload, onSubscriptionActivated });
-    await handler(createRequest('{}') as never);
+    await handler(createRequest("{}") as never);
 
     expect(onPayload).toHaveBeenCalledWith(event);
     expect(onSubscriptionActivated).toHaveBeenCalledWith(event);
@@ -111,7 +112,7 @@ describe("Webhook", () => {
       const handlerFn = vi.fn();
       const config = { [handlerKey]: handlerFn } as WebhookConfig;
       const handler = Webhook(config);
-      await handler(createRequest('{}') as never);
+      await handler(createRequest("{}") as never);
 
       expect(handlerFn).toHaveBeenCalledWith(event);
     }
@@ -123,7 +124,7 @@ describe("Webhook", () => {
 
     const onOrderCompleted = vi.fn();
     const handler = Webhook({ onOrderCompleted });
-    await handler(createRequest('{}') as never);
+    await handler(createRequest("{}") as never);
 
     expect(onOrderCompleted).not.toHaveBeenCalled();
   });
@@ -134,7 +135,7 @@ describe("Webhook", () => {
 
     const onOrderCompleted = vi.fn().mockRejectedValue(new Error("DB error"));
     const handler = Webhook({ onOrderCompleted });
-    const response = await handler(createRequest('{}') as never);
+    const response = await handler(createRequest("{}") as never);
 
     expect(response.status).toBe(500);
     const body = await response.json();
@@ -165,7 +166,7 @@ describe("Webhook", () => {
     });
 
     const handler = Webhook({ onPayload, onOrderCompleted });
-    const response = await handler(createRequest('{}') as never);
+    const response = await handler(createRequest("{}") as never);
 
     expect(response.status).toBe(200);
     expect(order).toEqual(["onPayload", "onOrderCompleted"]);

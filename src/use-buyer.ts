@@ -1,8 +1,22 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useContext, useMemo, useState } from "react";
 
-import type { WaffoPancake, CancelSubscriptionParams, CancelSubscriptionResult, CancelOnetimeOrderParams, CancelOnetimeOrderResult, ReactivateSubscriptionParams, ReactivateSubscriptionResult, CreateRefundTicketParams, ResubmitRefundTicketParams, RefundTicket, GraphQLParams, GraphQLResponse } from "@waffo/pancake-ts";
+import { PancakeContext } from "./provider.js";
+
+import type {
+  CancelSubscriptionParams,
+  CancelSubscriptionResult,
+  CancelOnetimeOrderParams,
+  CancelOnetimeOrderResult,
+  ReactivateSubscriptionParams,
+  ReactivateSubscriptionResult,
+  CreateRefundTicketParams,
+  ResubmitRefundTicketParams,
+  RefundTicket,
+  GraphQLParams,
+  GraphQLResponse,
+} from "@waffo/pancake-ts";
 
 /** State of an async buyer action */
 export interface BuyerActionState<T = unknown> {
@@ -60,74 +74,71 @@ function useBuyerAction<TParams, TResult>(
 /**
  * React hook for buyer self-service actions.
  *
- * Wraps `client.buyer(token)` methods with React state management
- * (loading, error, data) for each action.
+ * Must be used within `<WaffoPancakeProvider>`. All operations are executed
+ * via server actions — the private key never leaves the server.
  *
- * @param client - Waffo Pancake client instance
- * @param token - Buyer session token (from `client.auth.issueSessionToken()`)
  * @returns Buyer action handlers with loading/error states
  *
  * @example
  * ```tsx
- * const buyer = useBuyer(client, sessionToken);
- *
- * // Cancel a subscription
- * <button
- *   onClick={() => buyer.cancelSubscription.execute({ orderId: "ORD_xxx" })}
- *   disabled={buyer.cancelSubscription.isLoading}
- * >
- *   Cancel Subscription
- * </button>
- *
- * // Show result
- * {buyer.cancelSubscription.data && (
- *   <p>Status: {buyer.cancelSubscription.data.status}</p>
- * )}
- *
- * // GraphQL query
- * const orders = await buyer.query({ query: `{ orders { id status } }` });
+ * function AccountPage() {
+ *   const buyer = useBuyer();
+ *   return (
+ *     <button onClick={() => buyer.cancelSubscription.execute({ orderId: "ORD_xxx" })}>
+ *       Cancel
+ *     </button>
+ *   );
+ * }
  * ```
  */
-export function useBuyer(client: WaffoPancake, token: string): UseBuyerReturn {
-  const session = useMemo(() => client.buyer(token), [client, token]);
+export function useBuyer(): UseBuyerReturn {
+  const ctx = useContext(PancakeContext);
+  if (!ctx) throw new Error("useBuyer: must be used within <WaffoPancakeProvider>");
+
+  const { getBuyerToken, buyerSessionAction } = ctx;
+
+  const callAction = useCallback(
+    async (actionType: string, params: unknown) => {
+      const token = await getBuyerToken();
+      return buyerSessionAction(token, actionType as never, params);
+    },
+    [getBuyerToken, buyerSessionAction],
+  );
 
   const cancelSubscription = useBuyerAction<CancelSubscriptionParams, CancelSubscriptionResult>(
-    useCallback((params) => session.cancelSubscription(params), [session]),
+    useCallback((params) => callAction("cancelSubscription", params) as Promise<CancelSubscriptionResult>, [callAction]),
   );
 
   const cancelOnetimeOrder = useBuyerAction<CancelOnetimeOrderParams, CancelOnetimeOrderResult>(
-    useCallback((params) => session.cancelOnetimeOrder(params), [session]),
+    useCallback((params) => callAction("cancelOnetimeOrder", params) as Promise<CancelOnetimeOrderResult>, [callAction]),
   );
 
   const reactivateSubscription = useBuyerAction<ReactivateSubscriptionParams, ReactivateSubscriptionResult>(
-    useCallback((params) => session.reactivateSubscription(params), [session]),
+    useCallback((params) => callAction("reactivateSubscription", params) as Promise<ReactivateSubscriptionResult>, [callAction]),
   );
 
   const createRefundTicket = useBuyerAction<CreateRefundTicketParams, { ticket: RefundTicket }>(
-    useCallback((params) => session.createRefundTicket(params), [session]),
+    useCallback((params) => callAction("createRefundTicket", params) as Promise<{ ticket: RefundTicket }>, [callAction]),
   );
   const createRefundTicketMapped = useMemo(
-    () => ({
-      ...createRefundTicket,
-      data: createRefundTicket.data?.ticket ?? null,
-    }),
+    () => ({ ...createRefundTicket, data: createRefundTicket.data?.ticket ?? null }),
     [createRefundTicket],
   );
 
   const resubmitRefundTicket = useBuyerAction<ResubmitRefundTicketParams, { ticket: RefundTicket }>(
-    useCallback((params) => session.resubmitRefundTicket(params), [session]),
+    useCallback((params) => callAction("resubmitRefundTicket", params) as Promise<{ ticket: RefundTicket }>, [callAction]),
   );
   const resubmitRefundTicketMapped = useMemo(
-    () => ({
-      ...resubmitRefundTicket,
-      data: resubmitRefundTicket.data?.ticket ?? null,
-    }),
+    () => ({ ...resubmitRefundTicket, data: resubmitRefundTicket.data?.ticket ?? null }),
     [resubmitRefundTicket],
   );
 
   const query = useCallback(
-    <T = Record<string, unknown>>(params: GraphQLParams) => session.graphql.query<T>(params),
-    [session],
+    async <T = Record<string, unknown>>(params: GraphQLParams) => {
+      const token = await getBuyerToken();
+      return buyerSessionAction(token, "query", params) as Promise<GraphQLResponse<T>>;
+    },
+    [getBuyerToken, buyerSessionAction],
   );
 
   return {

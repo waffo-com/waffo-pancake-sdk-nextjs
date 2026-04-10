@@ -4,7 +4,7 @@ import React from "react";
 
 import { useCheckout } from "./use-checkout.js";
 
-import type { AnonymousCheckoutProps, AuthenticatedCheckoutProps } from "./types.js";
+import type { CheckoutProps, LinkCheckoutProps, AnonymousCheckoutProps, AuthenticatedCheckoutProps } from "./types.js";
 
 type CheckoutButtonBaseProps = {
   /** Button content */
@@ -19,75 +19,55 @@ type CheckoutButtonBaseProps = {
   disabled?: boolean;
 } & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "disabled" | "children">;
 
+/** Props for CheckoutButton — link mode */
+export type LinkCheckoutButtonProps = CheckoutButtonBaseProps & LinkCheckoutProps;
+
 /** Props for CheckoutButton — anonymous mode */
 export type AnonymousCheckoutButtonProps = CheckoutButtonBaseProps & AnonymousCheckoutProps;
 
 /** Props for CheckoutButton — authenticated mode */
-export type AuthenticatedCheckoutButtonProps = CheckoutButtonBaseProps &
-  AuthenticatedCheckoutProps & {
-    type: "authenticated";
-  };
+export type AuthenticatedCheckoutButtonProps = CheckoutButtonBaseProps & AuthenticatedCheckoutProps;
 
-export type CheckoutButtonProps = AnonymousCheckoutButtonProps | AuthenticatedCheckoutButtonProps;
+export type CheckoutButtonProps = LinkCheckoutButtonProps | AnonymousCheckoutButtonProps | AuthenticatedCheckoutButtonProps;
 
 /**
  * A button that triggers a Waffo Pancake checkout flow on click.
  *
- * Avoids popup blockers by opening the window synchronously in the click handler.
- * Shows a loading state while the checkout session is being created.
+ * Three checkout types:
+ * - **link**: Instant redirect to product page URL (no server action needed)
+ * - **anonymous**: Calls server action to create session, then redirects
+ * - **authenticated**: Calls server action to create session + token, then redirects
+ *
+ * The private key never leaves the server — anonymous and authenticated modes
+ * use a server action created by `createCheckoutAction()`.
+ *
+ * @param props - Flattened checkout props, button content, and optional styling
  *
  * @example
  * ```tsx
- * // Anonymous checkout — redirect (default)
- * <CheckoutButton
- *   client={client}
- *   params={{ productId: "PROD_xxx", currency: "USD" }}
- * >
+ * // Link checkout — no server action needed
+ * <CheckoutButton type="link" storeSlug="my-store" productId="PROD_xxx" currency="USD">
  *   Buy Now
  * </CheckoutButton>
  *
- * // Authenticated checkout — popup
- * <CheckoutButton
- *   client={client}
- *   params={{ productId: "PROD_xxx", currency: "USD", buyerIdentity: "user@example.com" }}
- *   type="authenticated"
- *   mode="popup"
- *   loadingChildren="Opening checkout..."
- * >
+ * // Anonymous checkout — via server action
+ * <CheckoutButton action={checkout} productId="PROD_xxx" currency="USD">
+ *   Buy Now
+ * </CheckoutButton>
+ *
+ * // Authenticated checkout — via server action
+ * <CheckoutButton action={checkout} type="authenticated" productId="PROD_xxx" currency="USD" buyerIdentity="user@example.com">
  *   Buy Now
  * </CheckoutButton>
  * ```
  */
 export function CheckoutButton(props: CheckoutButtonProps) {
-  const {
-    client,
-    params,
-    mode,
-    popupLoadingUrl,
-    onSuccess,
-    onError,
-    children,
-    loadingChildren,
-    className,
-    style,
-    disabled,
-    ...buttonProps
-  } = props;
+  const { children, loadingChildren, className, style, disabled, ...checkoutProps } = props;
 
-  const type = "type" in props ? props.type : undefined;
-
-  const { checkout, isLoading } = useCheckout({
-    client,
-    params: params as never,
-    type: type as never,
-    mode,
-    popupLoadingUrl,
-    onSuccess,
-    onError,
-  });
+  const { checkout, isLoading } = useCheckout(checkoutProps as CheckoutProps);
 
   return (
-    <button type="button" onClick={checkout} disabled={disabled || isLoading} className={className} style={style} {...buttonProps}>
+    <button type="button" onClick={checkout} disabled={disabled || isLoading} className={className} style={style}>
       {isLoading ? (loadingChildren ?? children) : children}
     </button>
   );

@@ -8,8 +8,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ### Added
 
-- **`<CheckoutButton>`** — React component that triggers checkout on click. Supports anonymous and authenticated modes, redirect (default) and popup navigation. Avoids popup blockers by synchronously opening the window in the click handler.
-- **`useCheckout()`** — React hook for programmatic checkout flow. Returns `{ checkout, isLoading, error }`. Same popup blocker avoidance.
-- **Two navigation modes** — `mode="redirect"` (default): `window.location.href` navigation. `mode="popup"`: opens a new window with a loading page, then navigates to checkout URL.
-- **`Webhook()`** — Next.js route handler factory for webhook signature verification. Auto-dispatches to event-specific handlers (`onOrderCompleted`, `onSubscriptionActivated`, `onRefundSucceeded`, etc.). Supports catch-all `onPayload` handler.
-- **`useBuyer()`** — React hook for buyer self-service. Wraps `client.buyer(token)` with per-action loading/error/data state: `cancelSubscription`, `cancelOnetimeOrder`, `reactivateSubscription`, `createRefundTicket`, `resubmitRefundTicket`, `query` (GraphQL).
+- **`<WaffoPancakeProvider>`** — Context provider that manages the Waffo Pancake client and buyer token lifecycle. Auto-issues session tokens, caches in memory, refreshes 30s before expiry. All buyer hooks read from context — no manual token management.
+- **`<CheckoutButton>`** — React component for one-click checkout. Three modes: `type="link"` (instant redirect, no API call), anonymous (API session), `type="authenticated"` (API session + token). All props flattened directly on the component. Popup blocker avoidance via synchronous `window.open`.
+- **`useCheckout()`** — React hook for programmatic checkout flow. Same three modes as `CheckoutButton`. Returns `{ checkout, isLoading, error }`.
+- **`Webhook()`** — Next.js route handler factory for webhook signature verification. Auto-dispatches to 10 event-specific handlers (`onOrderCompleted`, `onSubscriptionActivated`, `onRefundSucceeded`, etc.). Supports catch-all `onPayload` handler.
+- **`useBuyer()`** — React hook for buyer self-service actions. Works with Provider (no args) or standalone (client + token). Actions: `cancelSubscription`, `cancelOnetimeOrder`, `reactivateSubscription`, `createRefundTicket`, `resubmitRefundTicket`, `query`.
+- **`useBuyerOrders()`** — Fetch buyer's order history (one-time + subscription) with product info, payments, and billing cycle.
+- **`useBuyerPayments()`** — Fetch buyer's payment records with amounts, status, and failure reasons.
+- **`useBuyerRefundTickets()`** — Fetch buyer's refund tickets with status and requested amounts.
+- **`useMerchantOrders(client, { storeId })`** — Fetch recent orders for a store.
+- **`useMerchantSales(client, storeId)`** — Fetch sales overview: revenue, order count, customer count, status breakdown, revenue trend.
+- **`useMerchantSubscriptions(client, storeId)`** — Fetch subscription overview: active/canceling/pastDue counts + full list.
+- **Re-exports from `@waffo/pancake-ts`** — `WaffoPancake`, `WaffoPancakeError`, `TaxCategory`, `WebhookEventType`, `PriceInfo`, `BillingDetail`, `WebhookEvent`, `WaffoPancakeConfig`. One package, all imports.

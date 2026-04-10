@@ -3,19 +3,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { useCheckout } from "../use-checkout.js";
 
-import type { WaffoPancake } from "@waffo/pancake-ts";
+import type { CheckoutAction } from "../server.js";
 
-function createMockClient(overrides?: { anonymous?: () => Promise<unknown>; authenticated?: () => Promise<unknown> }) {
-  return {
-    checkout: {
-      anonymous: {
-        create: overrides?.anonymous ?? vi.fn().mockResolvedValue({ sessionId: "cs_123", checkoutUrl: "https://checkout.example.com/cs_123", expiresAt: "2026-04-10T12:00:00Z" }),
-      },
-      authenticated: {
-        create: overrides?.authenticated ?? vi.fn().mockResolvedValue({ sessionId: "cs_456", checkoutUrl: "https://checkout.example.com/cs_456#token=tok_abc", expiresAt: "2026-04-10T12:00:00Z", token: "tok_abc", tokenExpiresAt: "2026-04-10T12:30:00Z" }),
-      },
+function createMockAction(overrides?: { result?: unknown; error?: Error }): CheckoutAction {
+  if (overrides?.error) {
+    return vi.fn().mockRejectedValue(overrides.error);
+  }
+  return vi.fn().mockResolvedValue(
+    overrides?.result ?? {
+      sessionId: "cs_123",
+      checkoutUrl: "https://checkout.example.com/cs_123",
+      expiresAt: "2026-04-10T12:00:00Z",
     },
-  } as unknown as WaffoPancake;
+  );
 }
 
 describe("useCheckout", () => {
@@ -29,116 +29,200 @@ describe("useCheckout", () => {
     });
   });
 
-  it("should return initial state", () => {
-    const client = createMockClient();
-    const { result } = renderHook(() =>
-      useCheckout({ client, params: { productId: "PROD_xxx", currency: "USD" } }),
-    );
+  describe("link checkout", () => {
+    it("should redirect to product page URL", () => {
+      const { result } = renderHook(() =>
+        useCheckout({
+          type: "link",
+          storeSlug: "my-store",
+          productId: "PROD_xxx",
+          currency: "USD",
+        }),
+      );
 
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.error).toBeNull();
-    expect(typeof result.current.checkout).toBe("function");
+      act(() => {
+        result.current.checkout();
+      });
+
+      expect(window.location.href).toBe("https://pancake.waffo.ai/store/my-store/product/PROD_xxx?currency=USD");
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    it("should include all optional params in URL", () => {
+      const { result } = renderHook(() =>
+        useCheckout({
+          type: "link",
+          storeSlug: "my-store",
+          productId: "PROD_xxx",
+          currency: "JPY",
+          email: "buyer@example.com",
+          successUrl: "https://example.com/success",
+          test: true,
+          country: "JP",
+          isBusiness: true,
+        }),
+      );
+
+      act(() => {
+        result.current.checkout();
+      });
+
+      const url = new URL(window.location.href);
+      expect(url.pathname).toBe("/store/my-store/product/PROD_xxx");
+      expect(url.searchParams.get("currency")).toBe("JPY");
+      expect(url.searchParams.get("email")).toBe("buyer@example.com");
+      expect(url.searchParams.get("success_url")).toBe("https://example.com/success");
+      expect(url.searchParams.get("test")).toBe("true");
+      expect(url.searchParams.get("country")).toBe("JP");
+      expect(url.searchParams.get("is_business")).toBe("true");
+    });
+
+    it("should open popup in popup mode", () => {
+      vi.spyOn(window, "open").mockReturnValue(null);
+
+      const { result } = renderHook(() =>
+        useCheckout({
+          type: "link",
+          storeSlug: "my-store",
+          productId: "PROD_xxx",
+          currency: "USD",
+          mode: "popup",
+        }),
+      );
+
+      act(() => {
+        result.current.checkout();
+      });
+
+      expect(window.open).toHaveBeenCalledWith(
+        "https://pancake.waffo.ai/store/my-store/product/PROD_xxx?currency=USD",
+        "_blank",
+      );
+    });
   });
 
-  it("should redirect on anonymous checkout (default mode)", async () => {
-    const client = createMockClient();
-    const onSuccess = vi.fn();
-    const { result } = renderHook(() =>
-      useCheckout({ client, params: { productId: "PROD_xxx", currency: "USD" }, onSuccess }),
-    );
+  describe("anonymous checkout", () => {
+    it("should call action and redirect on success", async () => {
+      const action = createMockAction();
+      const onSuccess = vi.fn();
+      const { result } = renderHook(() => useCheckout({ action, productId: "PROD_xxx", currency: "USD", onSuccess }));
 
-    await act(async () => {
-      result.current.checkout();
-      // Wait for async
-      await new Promise((r) => setTimeout(r, 10));
+      await act(async () => {
+        result.current.checkout();
+        await new Promise((r) => setTimeout(r, 10));
+      });
+
+      expect(action).toHaveBeenCalled();
+      expect(window.location.href).toBe("https://checkout.example.com/cs_123");
+      expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ sessionId: "cs_123" }));
     });
-
-    expect(window.location.href).toBe("https://checkout.example.com/cs_123");
-    expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ sessionId: "cs_123" }));
   });
 
-  it("should redirect on authenticated checkout", async () => {
-    const client = createMockClient();
-    const { result } = renderHook(() =>
-      useCheckout({
-        client,
-        params: { productId: "PROD_xxx", currency: "USD", buyerIdentity: "user@example.com" },
-        type: "authenticated",
-      }),
-    );
+  describe("authenticated checkout", () => {
+    it("should call action with type=authenticated and redirect", async () => {
+      const action = createMockAction({
+        result: {
+          sessionId: "cs_456",
+          checkoutUrl: "https://checkout.example.com/cs_456#token=tok_abc",
+          expiresAt: "2026-04-10T12:00:00Z",
+          token: "tok_abc",
+          tokenExpiresAt: "2026-04-10T12:30:00Z",
+        },
+      });
 
-    await act(async () => {
-      result.current.checkout();
-      await new Promise((r) => setTimeout(r, 10));
+      const { result } = renderHook(() =>
+        useCheckout({
+          type: "authenticated",
+          action,
+          productId: "PROD_xxx",
+          currency: "USD",
+          buyerIdentity: "user@example.com",
+        }),
+      );
+
+      await act(async () => {
+        result.current.checkout();
+        await new Promise((r) => setTimeout(r, 10));
+      });
+
+      expect(action).toHaveBeenCalledWith(expect.objectContaining({ type: "authenticated", productId: "PROD_xxx" }));
+      expect(window.location.href).toBe("https://checkout.example.com/cs_456#token=tok_abc");
     });
-
-    expect(window.location.href).toBe("https://checkout.example.com/cs_456#token=tok_abc");
   });
 
-  it("should open popup in popup mode", async () => {
-    const mockPopup = { location: { href: "" }, close: vi.fn() };
-    vi.spyOn(window, "open").mockReturnValue(mockPopup as unknown as Window);
+  describe("popup mode", () => {
+    it("should open popup and fill URL", async () => {
+      const mockPopup = { location: { href: "" }, close: vi.fn() };
+      vi.spyOn(window, "open").mockReturnValue(mockPopup as unknown as Window);
 
-    const client = createMockClient();
-    const { result } = renderHook(() =>
-      useCheckout({ client, params: { productId: "PROD_xxx", currency: "USD" }, mode: "popup" }),
-    );
+      const action = createMockAction();
+      const { result } = renderHook(() => useCheckout({ action, productId: "PROD_xxx", currency: "USD", mode: "popup" }));
 
-    await act(async () => {
-      result.current.checkout();
-      await new Promise((r) => setTimeout(r, 10));
+      await act(async () => {
+        result.current.checkout();
+        await new Promise((r) => setTimeout(r, 10));
+      });
+
+      expect(window.open).toHaveBeenCalledWith(expect.any(String), "_blank");
+      expect(mockPopup.location.href).toBe("https://checkout.example.com/cs_123");
     });
 
-    expect(window.open).toHaveBeenCalledWith(expect.any(String), "_blank");
-    expect(mockPopup.location.href).toBe("https://checkout.example.com/cs_123");
+    it("should close popup on error", async () => {
+      const mockPopup = { location: { href: "" }, close: vi.fn() };
+      vi.spyOn(window, "open").mockReturnValue(mockPopup as unknown as Window);
+
+      const action = createMockAction({ error: new Error("API error") });
+      const onError = vi.fn();
+
+      const { result } = renderHook(() => useCheckout({ action, productId: "PROD_xxx", currency: "USD", mode: "popup", onError }));
+
+      await act(async () => {
+        result.current.checkout();
+        await new Promise((r) => setTimeout(r, 10));
+      });
+
+      expect(mockPopup.close).toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledWith(expect.any(Error));
+      expect(result.current.error?.message).toBe("API error");
+    });
   });
 
-  it("should close popup on error", async () => {
-    const mockPopup = { location: { href: "" }, close: vi.fn() };
-    vi.spyOn(window, "open").mockReturnValue(mockPopup as unknown as Window);
+  describe("loading state", () => {
+    it("should set isLoading during async checkout", async () => {
+      let resolveAction: (value: unknown) => void;
+      const action = vi.fn(
+        () =>
+          new Promise((r) => {
+            resolveAction = r;
+          }),
+      ) as unknown as CheckoutAction;
 
-    const client = createMockClient({
-      anonymous: vi.fn().mockRejectedValue(new Error("API error")),
-    });
-    const onError = vi.fn();
+      const { result } = renderHook(() => useCheckout({ action, productId: "PROD_xxx", currency: "USD" }));
 
-    const { result } = renderHook(() =>
-      useCheckout({ client, params: { productId: "PROD_xxx", currency: "USD" }, mode: "popup", onError }),
-    );
+      expect(result.current.isLoading).toBe(false);
 
-    await act(async () => {
-      result.current.checkout();
-      await new Promise((r) => setTimeout(r, 10));
-    });
+      act(() => {
+        result.current.checkout();
+      });
 
-    expect(mockPopup.close).toHaveBeenCalled();
-    expect(onError).toHaveBeenCalledWith(expect.any(Error));
-    expect(result.current.error?.message).toBe("API error");
-  });
+      expect(result.current.isLoading).toBe(true);
 
-  it("should set isLoading during checkout", async () => {
-    let resolveCreate: (value: unknown) => void;
-    const client = createMockClient({
-      anonymous: () => new Promise((r) => { resolveCreate = r; }),
-    });
+      await act(async () => {
+        resolveAction!({ sessionId: "cs_789", checkoutUrl: "https://checkout.example.com/cs_789", expiresAt: "2026-04-10T12:00:00Z" });
+        await new Promise((r) => setTimeout(r, 10));
+      });
 
-    const { result } = renderHook(() =>
-      useCheckout({ client, params: { productId: "PROD_xxx", currency: "USD" } }),
-    );
-
-    expect(result.current.isLoading).toBe(false);
-
-    act(() => {
-      result.current.checkout();
+      expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.isLoading).toBe(true);
+    it("should not set isLoading for link checkout", () => {
+      const { result } = renderHook(() => useCheckout({ type: "link", storeSlug: "my-store", productId: "PROD_xxx" }));
 
-    await act(async () => {
-      resolveCreate!({ sessionId: "cs_789", checkoutUrl: "https://checkout.example.com/cs_789", expiresAt: "2026-04-10T12:00:00Z" });
-      await new Promise((r) => setTimeout(r, 10));
+      act(() => {
+        result.current.checkout();
+      });
+
+      expect(result.current.isLoading).toBe(false);
     });
-
-    expect(result.current.isLoading).toBe(false);
   });
 });

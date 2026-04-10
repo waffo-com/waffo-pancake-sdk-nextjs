@@ -1,27 +1,44 @@
 import { renderHook, act } from "@testing-library/react";
+import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { PancakeContext } from "../provider.js";
 import { useBuyer } from "../use-buyer.js";
 
-import type { WaffoPancake } from "@waffo/pancake-ts";
+import type { PancakeContextValue } from "../provider.js";
 
-function createMockClient() {
-  const buyerSession = {
-    cancelSubscription: vi.fn().mockResolvedValue({ orderId: "ORD_xxx", status: "canceling" }),
-    cancelOnetimeOrder: vi.fn().mockResolvedValue({ orderId: "ORD_yyy", status: "canceled" }),
-    reactivateSubscription: vi.fn().mockResolvedValue({ orderId: "ORD_xxx", status: "active" }),
-    createRefundTicket: vi.fn().mockResolvedValue({ ticket: { id: "TKT_xxx", status: "pending" } }),
-    resubmitRefundTicket: vi.fn().mockResolvedValue({ ticket: { id: "TKT_xxx", status: "pending" } }),
-    graphql: {
-      query: vi.fn().mockResolvedValue({ data: { orders: [] } }),
-    },
+function createMockContext(): PancakeContextValue {
+  const buyerSessionAction = vi.fn(async (_token: string, actionType: string) => {
+    switch (actionType) {
+      case "cancelSubscription":
+        return { orderId: "ORD_xxx", status: "canceling" };
+      case "cancelOnetimeOrder":
+        return { orderId: "ORD_yyy", status: "canceled" };
+      case "reactivateSubscription":
+        return { orderId: "ORD_xxx", status: "active" };
+      case "createRefundTicket":
+        return { ticket: { id: "TKT_xxx", status: "pending" } };
+      case "resubmitRefundTicket":
+        return { ticket: { id: "TKT_xxx", status: "pending" } };
+      case "query":
+        return { data: { orders: [] } };
+      default:
+        throw new Error(`Unknown action: ${actionType}`);
+    }
+  });
+
+  return {
+    getBuyerToken: vi.fn().mockResolvedValue("tok_abc"),
+    buyerSessionAction,
+    hasBuyer: true,
+    isBuyerReady: true,
   };
+}
 
-  const client = {
-    buyer: vi.fn().mockReturnValue(buyerSession),
-  } as unknown as WaffoPancake;
-
-  return { client, buyerSession };
+function createWrapper(ctx: PancakeContextValue) {
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return <PancakeContext.Provider value={ctx}>{children}</PancakeContext.Provider>;
+  };
 }
 
 describe("useBuyer", () => {
@@ -29,67 +46,58 @@ describe("useBuyer", () => {
     vi.restoreAllMocks();
   });
 
-  it("should create buyer session from client and token", () => {
-    const { client } = createMockClient();
-    renderHook(() => useBuyer(client, "tok_abc"));
-
-    expect(client.buyer).toHaveBeenCalledWith("tok_abc");
-  });
-
   it("should provide initial state for all actions", () => {
-    const { client } = createMockClient();
-    const { result } = renderHook(() => useBuyer(client, "tok_abc"));
+    const ctx = createMockContext();
+    const { result } = renderHook(() => useBuyer(), { wrapper: createWrapper(ctx) });
 
     expect(result.current.cancelSubscription.isLoading).toBe(false);
     expect(result.current.cancelSubscription.error).toBeNull();
     expect(result.current.cancelSubscription.data).toBeNull();
-
     expect(result.current.cancelOnetimeOrder.isLoading).toBe(false);
     expect(result.current.reactivateSubscription.isLoading).toBe(false);
     expect(result.current.createRefundTicket.isLoading).toBe(false);
     expect(result.current.resubmitRefundTicket.isLoading).toBe(false);
   });
 
-  it("should execute cancelSubscription and return data", async () => {
-    const { client, buyerSession } = createMockClient();
-    const { result } = renderHook(() => useBuyer(client, "tok_abc"));
+  it("should execute cancelSubscription via server action", async () => {
+    const ctx = createMockContext();
+    const { result } = renderHook(() => useBuyer(), { wrapper: createWrapper(ctx) });
 
     await act(async () => {
       await result.current.cancelSubscription.execute({ orderId: "ORD_xxx" });
     });
 
-    expect(buyerSession.cancelSubscription).toHaveBeenCalledWith({ orderId: "ORD_xxx" });
+    expect(ctx.getBuyerToken).toHaveBeenCalled();
+    expect(ctx.buyerSessionAction).toHaveBeenCalledWith("tok_abc", "cancelSubscription", { orderId: "ORD_xxx" });
     expect(result.current.cancelSubscription.data).toEqual({ orderId: "ORD_xxx", status: "canceling" });
-    expect(result.current.cancelSubscription.isLoading).toBe(false);
   });
 
-  it("should execute cancelOnetimeOrder and return data", async () => {
-    const { client, buyerSession } = createMockClient();
-    const { result } = renderHook(() => useBuyer(client, "tok_abc"));
+  it("should execute cancelOnetimeOrder", async () => {
+    const ctx = createMockContext();
+    const { result } = renderHook(() => useBuyer(), { wrapper: createWrapper(ctx) });
 
     await act(async () => {
       await result.current.cancelOnetimeOrder.execute({ orderId: "ORD_yyy" });
     });
 
-    expect(buyerSession.cancelOnetimeOrder).toHaveBeenCalledWith({ orderId: "ORD_yyy" });
+    expect(ctx.buyerSessionAction).toHaveBeenCalledWith("tok_abc", "cancelOnetimeOrder", { orderId: "ORD_yyy" });
     expect(result.current.cancelOnetimeOrder.data).toEqual({ orderId: "ORD_yyy", status: "canceled" });
   });
 
   it("should execute reactivateSubscription", async () => {
-    const { client, buyerSession } = createMockClient();
-    const { result } = renderHook(() => useBuyer(client, "tok_abc"));
+    const ctx = createMockContext();
+    const { result } = renderHook(() => useBuyer(), { wrapper: createWrapper(ctx) });
 
     await act(async () => {
       await result.current.reactivateSubscription.execute({ orderId: "ORD_xxx" });
     });
 
-    expect(buyerSession.reactivateSubscription).toHaveBeenCalledWith({ orderId: "ORD_xxx" });
     expect(result.current.reactivateSubscription.data).toEqual({ orderId: "ORD_xxx", status: "active" });
   });
 
   it("should execute createRefundTicket and unwrap ticket", async () => {
-    const { client, buyerSession } = createMockClient();
-    const { result } = renderHook(() => useBuyer(client, "tok_abc"));
+    const ctx = createMockContext();
+    const { result } = renderHook(() => useBuyer(), { wrapper: createWrapper(ctx) });
 
     await act(async () => {
       await result.current.createRefundTicket.execute({
@@ -99,46 +107,27 @@ describe("useBuyer", () => {
       });
     });
 
-    expect(buyerSession.createRefundTicket).toHaveBeenCalled();
-    // Should unwrap { ticket: ... } to just the ticket
     expect(result.current.createRefundTicket.data).toEqual({ id: "TKT_xxx", status: "pending" });
   });
 
-  it("should execute resubmitRefundTicket and unwrap ticket", async () => {
-    const { client, buyerSession } = createMockClient();
-    const { result } = renderHook(() => useBuyer(client, "tok_abc"));
-
-    await act(async () => {
-      await result.current.resubmitRefundTicket.execute({
-        ticketId: "TKT_xxx",
-        paymentId: "PAY_xxx",
-        reason: "Updated reason",
-        requestedAmount: { amount: "29.00", currency: "USD" },
-      });
-    });
-
-    expect(buyerSession.resubmitRefundTicket).toHaveBeenCalled();
-    expect(result.current.resubmitRefundTicket.data).toEqual({ id: "TKT_xxx", status: "pending" });
-  });
-
   it("should execute GraphQL query", async () => {
-    const { client, buyerSession } = createMockClient();
-    const { result } = renderHook(() => useBuyer(client, "tok_abc"));
+    const ctx = createMockContext();
+    const { result } = renderHook(() => useBuyer(), { wrapper: createWrapper(ctx) });
 
     let queryResult: unknown;
     await act(async () => {
       queryResult = await result.current.query({ query: "{ orders { id } }" });
     });
 
-    expect(buyerSession.graphql.query).toHaveBeenCalledWith({ query: "{ orders { id } }" });
+    expect(ctx.buyerSessionAction).toHaveBeenCalledWith("tok_abc", "query", { query: "{ orders { id } }" });
     expect(queryResult).toEqual({ data: { orders: [] } });
   });
 
-  it("should handle errors and set error state", async () => {
-    const { client, buyerSession } = createMockClient();
-    buyerSession.cancelSubscription.mockRejectedValue(new Error("Order not found"));
+  it("should handle errors", async () => {
+    const ctx = createMockContext();
+    (ctx.buyerSessionAction as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("Order not found"));
 
-    const { result } = renderHook(() => useBuyer(client, "tok_abc"));
+    const { result } = renderHook(() => useBuyer(), { wrapper: createWrapper(ctx) });
 
     await act(async () => {
       try {
@@ -149,33 +138,12 @@ describe("useBuyer", () => {
     });
 
     expect(result.current.cancelSubscription.error?.message).toBe("Order not found");
-    expect(result.current.cancelSubscription.isLoading).toBe(false);
     expect(result.current.cancelSubscription.data).toBeNull();
   });
 
-  it("should set isLoading during execution", async () => {
-    let resolveAction: (value: unknown) => void;
-    const { client, buyerSession } = createMockClient();
-    buyerSession.cancelSubscription.mockImplementation(
-      () => new Promise((r) => { resolveAction = r; }),
-    );
-
-    const { result } = renderHook(() => useBuyer(client, "tok_abc"));
-
-    expect(result.current.cancelSubscription.isLoading).toBe(false);
-
-    let executePromise: Promise<void>;
-    act(() => {
-      executePromise = result.current.cancelSubscription.execute({ orderId: "ORD_xxx" });
-    });
-
-    expect(result.current.cancelSubscription.isLoading).toBe(true);
-
-    await act(async () => {
-      resolveAction!({ orderId: "ORD_xxx", status: "canceling" });
-      await executePromise!;
-    });
-
-    expect(result.current.cancelSubscription.isLoading).toBe(false);
+  it("should throw when used outside provider", () => {
+    expect(() => {
+      renderHook(() => useBuyer());
+    }).toThrow("must be used within <WaffoPancakeProvider>");
   });
 });

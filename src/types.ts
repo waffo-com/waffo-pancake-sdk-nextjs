@@ -1,10 +1,12 @@
-import type { WaffoPancake, AnonymousCheckoutParams, AuthenticatedCheckoutParams, CheckoutSessionResult, AuthenticatedCheckoutResult } from "@waffo/pancake-ts";
+import type { CheckoutAction } from "./server.js";
+import type { AnonymousCheckoutParams, AuthenticatedCheckoutParams, CheckoutSessionResult, AuthenticatedCheckoutResult } from "@waffo/pancake-ts";
+
 
 /** Redirect mode for checkout navigation */
 export type CheckoutMode = "redirect" | "popup";
 
-/** Base checkout options shared by hook and component */
-export interface CheckoutOptions {
+/** Base checkout options shared by all checkout types */
+export interface CheckoutBaseOptions {
   /** How to navigate to checkout page. Default: `"redirect"` */
   mode?: CheckoutMode;
   /**
@@ -12,27 +14,55 @@ export interface CheckoutOptions {
    * Only used when `mode` is `"popup"`. Defaults to a minimal inline loading page.
    */
   popupLoadingUrl?: string;
-  /** Callback fired when checkout session is successfully created */
-  onSuccess?: (result: CheckoutSessionResult | AuthenticatedCheckoutResult) => void;
-  /** Callback fired when checkout session creation fails */
+  /** Callback fired on error */
   onError?: (error: Error) => void;
 }
 
-/** Props for anonymous checkout */
-export interface AnonymousCheckoutProps extends CheckoutOptions {
-  /** Waffo Pancake client instance */
-  client: WaffoPancake;
-  /** Checkout parameters */
-  params: AnonymousCheckoutParams;
+/** Link checkout — redirects to product page URL, no API call needed */
+export interface LinkCheckoutProps extends CheckoutBaseOptions {
+  type: "link";
+  /** Store slug (from Dashboard) */
+  storeSlug: string;
+  /** Product ID */
+  productId: string;
+  /** Currency code (ISO 4217). If omitted, product page auto-detects. */
+  currency?: string;
+  /** Pre-fill buyer email */
+  email?: string;
+  /** Redirect URL after successful payment */
+  successUrl?: string;
+  /** Use test environment */
+  test?: boolean;
+  /** Pre-fill billing country (ISO 3166-1) */
+  country?: string;
+  /** Is business purchase */
+  isBusiness?: boolean;
+  /**
+   * Base URL of the storefront. Default: `"https://pancake.waffo.ai"`
+   */
+  baseUrl?: string;
 }
 
-/** Props for authenticated checkout */
-export interface AuthenticatedCheckoutProps extends CheckoutOptions {
-  /** Waffo Pancake client instance */
-  client: WaffoPancake;
-  /** Checkout parameters */
-  params: AuthenticatedCheckoutParams;
-}
+/** Anonymous checkout — creates session via server action */
+export type AnonymousCheckoutProps = CheckoutBaseOptions & {
+  type?: "anonymous";
+  /** Server action created by `createCheckoutAction()` */
+  action: CheckoutAction;
+  /** Callback fired when checkout session is successfully created */
+  onSuccess?: (result: CheckoutSessionResult) => void;
+} & AnonymousCheckoutParams;
+
+/** Authenticated checkout — creates session + token via server action */
+export type AuthenticatedCheckoutProps = CheckoutBaseOptions & {
+  type: "authenticated";
+  /** Server action created by `createCheckoutAction()` */
+  action: CheckoutAction;
+  /** Callback fired when checkout session is successfully created */
+  onSuccess?: (result: AuthenticatedCheckoutResult) => void;
+} & AuthenticatedCheckoutParams;
+
+/** Union of all checkout prop types */
+export type CheckoutProps = LinkCheckoutProps | AnonymousCheckoutProps | AuthenticatedCheckoutProps;
 
 /** Return type of useCheckout hook */
 export interface UseCheckoutReturn {
