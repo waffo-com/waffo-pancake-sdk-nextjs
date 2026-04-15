@@ -24,13 +24,21 @@ export interface MerchantOrder {
   createdAt: string;
 }
 
-/** Sales overview statistics */
+/**
+ * Sales overview statistics.
+ *
+ * Monetary fields (`totalRevenue`, `revenueByPeriod[].amount`) are returned as
+ * display-formatted strings (e.g., `"9.99"`), not minor-currency-unit integers.
+ * The conversion happens server-side via the GraphQL `currencyDisplayLoader`.
+ */
 export interface SalesOverview {
   totalOrders: number;
+  /** Total succeeded payment revenue as display string (e.g., `"1234.56"`) */
   totalRevenue: string;
   totalCustomers: number;
   currency: string;
   ordersByStatus: Array<{ status: string; count: number }>;
+  /** Revenue by period; `amount` is a display string (e.g., `"9.99"`) */
   revenueByPeriod: Array<{ period: string; amount: string }>;
 }
 

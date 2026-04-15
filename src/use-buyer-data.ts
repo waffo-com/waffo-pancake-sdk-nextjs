@@ -48,13 +48,23 @@ export interface BuyerPayment {
   createdAt: string;
 }
 
-/** A buyer's refund ticket */
+/**
+ * A buyer's refund ticket.
+ *
+ * Ticket-level fields are flat; per-version fields (`reason`, `requestedAmount`)
+ * live under `versionData` because the buyer can resubmit a rejected ticket and
+ * each submission is a versioned record. `versionData` reflects the current
+ * (latest) version. `requestedAmount.amount` is a display-formatted string.
+ */
 export interface BuyerRefundTicket {
   id: string;
   status: string;
-  reason: string;
-  requestedAmount: string;
-  requestedCurrency: string;
+  versionNumber: number | null;
+  versionData: {
+    reason: string;
+    /** `null` if the ticket version has no requested amount recorded */
+    requestedAmount: { amount: string; currency: string } | null;
+  } | null;
   createdAt: string;
 }
 
@@ -83,7 +93,12 @@ const BUYER_PAYMENTS_QUERY = `query {
 
 const BUYER_REFUND_TICKETS_QUERY = `query {
   refundTickets(limit: 50) {
-    id status reason requestedAmount requestedCurrency createdAt
+    id status versionNumber
+    versionData {
+      reason
+      requestedAmount { amount currency }
+    }
+    createdAt
   }
 }`;
 

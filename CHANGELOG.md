@@ -4,6 +4,16 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-04-15
+
+### Fixed
+
+- **`useBuyerRefundTickets`** — the underlying GraphQL query was selecting non-existent top-level fields (`reason`, `requestedAmount`, `requestedCurrency`); these live under `versionData` because each ticket can have multiple submissions. Query now selects `versionData { reason, requestedAmount { amount, currency } }` and `versionNumber`. The `BuyerRefundTicket` interface is updated accordingly. **Breaking shape change for any consumer that read these fields**: replace `ticket.reason` → `ticket.versionData?.reason`, and `ticket.requestedAmount` → `ticket.versionData?.requestedAmount?.amount` (now display-formatted, e.g. `"29.00"`, paired with `requestedAmount.currency`).
+
+### Compatibility
+
+- **`useMerchantSales`** — `SalesOverview.totalRevenue` and `SalesOverview.revenueByPeriod[].amount` are now display-formatted strings (e.g. `"9.99"`) instead of minor-currency-unit strings. The TypeScript type is unchanged (`string`), but consumers must drop any `parseInt() / 100` or similar conversion. JSDoc updated to reflect the semantic. Aligns with `waffo-pancake-graphql-service` v2026.04.15.1.
+
 ## [0.1.1] - 2026-04-15
 
 ### Documentation
