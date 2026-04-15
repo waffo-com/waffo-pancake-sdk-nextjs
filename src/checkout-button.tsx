@@ -56,7 +56,7 @@ export type CheckoutButtonProps = LinkCheckoutButtonProps | AnonymousCheckoutBut
  * </CheckoutButton>
  *
  * // Authenticated checkout — via server action
- * <CheckoutButton action={checkout} type="authenticated" productId="PROD_xxx" currency="USD" buyerIdentity="user@example.com">
+ * <CheckoutButton action={checkout} type="authenticated" productId="PROD_xxx" currency="USD" buyerIdentity="userIdInYourSystem" buyerEmail="user@example.com">
  *   Buy Now
  * </CheckoutButton>
  * ```

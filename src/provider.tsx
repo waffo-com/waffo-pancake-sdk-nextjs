@@ -62,8 +62,10 @@ export interface WaffoPancakeProviderProps {
  *
  * @example
  * ```tsx
+ * // identity must match what you passed as `buyerIdentity` at checkout time —
+ * // buyer-portal lookups are keyed by merchant_provided_buyer_identity
  * <WaffoPancakeProvider buyer={{
- *   identity: user.email,
+ *   identity: user.id,
  *   storeId: "STO_xxx",
  *   issueToken,       // from createBuyerTokenAction()
  *   sessionAction,    // from createBuyerSessionAction()

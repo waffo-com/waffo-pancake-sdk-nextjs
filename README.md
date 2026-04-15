@@ -26,7 +26,7 @@ import { CheckoutButton } from "@waffo/pancake-nextjs";
 // Product ID and store slug are available in Dashboard > Products
 <CheckoutButton type="link" storeSlug="my-store" productId="PROD_xxx" currency="USD">
   Buy Now
-</CheckoutButton>
+</CheckoutButton>;
 ```
 
 For API-level control (dynamic pricing, buyer identity, trial overrides), set up server actions first:
@@ -59,11 +59,11 @@ Private keys are captured in server action closures — they never reach the bro
 
 Waffo supports three checkout modes based on how much control the merchant needs:
 
-| Mode | `type` | Needs Server Action? | Use Case |
-|------|--------|:--------------------:|----------|
-| **Link** | `"link"` | No | Landing pages, email campaigns. Redirects to product page which auto-creates a session. |
-| **Anonymous** | omit | Yes | API-level control without buyer identity. Buyer fills in details on checkout page. |
-| **Authenticated** | `"authenticated"` | Yes | Merchant provides buyer identity. Form pre-filled. Enables buyer self-service. |
+| Mode              | `type`            | Needs Server Action? | Use Case                                                                                |
+| ----------------- | ----------------- | :------------------: | --------------------------------------------------------------------------------------- |
+| **Link**          | `"link"`          |          No          | Landing pages, email campaigns. Redirects to product page which auto-creates a session. |
+| **Anonymous**     | omit              |         Yes          | API-level control without buyer identity. Buyer fills in details on checkout page.      |
+| **Authenticated** | `"authenticated"` |         Yes          | Merchant provides buyer identity. Form pre-filled. Enables buyer self-service.          |
 
 > **We recommend authenticated checkout whenever possible.** It binds orders to a stable merchant-controlled identifier. In anonymous mode, the buyer self-reports their email — if they enter a different address, previous orders become unlinked and subscription trial periods can be exploited.
 
@@ -120,24 +120,25 @@ import { checkout } from "./lib/waffo";
 
 ### Authenticated Checkout (Recommended)
 
-Creates a session **and** a token. The checkout form arrives pre-filled with the buyer's identity:
+Creates a session **and** a token bound to the buyer you provide. `buyerIdentity` is for order attribution and trial tracking — it is not rendered on the checkout page. To pre-fill the email field on the checkout form, pass `buyerEmail` explicitly.
 
 ```tsx
 import { CheckoutButton } from "@waffo/pancake-nextjs";
 import { checkout } from "./lib/waffo";
 
-// Basic — form pre-filled with email
-<CheckoutButton type="authenticated" action={checkout} productId="PROD_xxx" currency="USD" buyerIdentity={user.email}>
+// Basic — buyer identity only (checkout page email field stays empty)
+<CheckoutButton type="authenticated" action={checkout} productId="PROD_xxx" currency="USD" buyerIdentity={user.id}>
   Upgrade to Pro
 </CheckoutButton>
 
-// Dynamic pricing + popup mode (keeps your page open during checkout)
+// Dynamic pricing + popup mode + email pre-fill
 <CheckoutButton
   type="authenticated"
   action={checkout}
   productId="PROD_xxx"
   currency="USD"
-  buyerIdentity={user.email}
+  buyerIdentity={user.id}
+  buyerEmail={user.email}
   priceSnapshot={{ amount: "7.99", taxCategory: "saas" }}
   mode="popup"
   loadingChildren="Opening checkout..."
@@ -145,13 +146,14 @@ import { checkout } from "./lib/waffo";
   Upgrade — $7.99/mo
 </CheckoutButton>
 
-// Full pre-fill — identity + billing + skip trial
+// Full pre-fill — identity + email + billing + skip trial
 <CheckoutButton
   type="authenticated"
   action={checkout}
   productId="PROD_xxx"
   currency="USD"
-  buyerIdentity={user.email}
+  buyerIdentity={user.id}
+  buyerEmail={user.email}
   billingDetail={{ country: "US", isBusiness: true, state: "CA" }}
   withTrial={false}
   successUrl="https://example.com/dashboard?upgraded=true"
@@ -173,12 +175,13 @@ const { checkout, isLoading, error } = useCheckout({
   action: checkoutAction,
   productId: "PROD_xxx",
   currency: "USD",
-  buyerIdentity: user.email,
+  buyerIdentity: user.id,
+  buyerEmail: user.email,
 });
 
 <button onClick={checkout} disabled={isLoading}>
   {isLoading ? "Creating session..." : "Buy Now"}
-</button>
+</button>;
 ```
 
 ### Navigation Modes
@@ -257,23 +260,21 @@ function AccountPage() {
       {/* Subscription management */}
       {orders?.subscriptionOrders.map((sub) => (
         <div key={sub.id}>
-          <p>{sub.product?.name} — {sub.status}</p>
-          {sub.status === "active" && (
-            <button onClick={() => buyer.cancelSubscription.execute({ orderId: sub.id })}>
-              Cancel
-            </button>
-          )}
+          <p>
+            {sub.product?.name} — {sub.status}
+          </p>
+          {sub.status === "active" && <button onClick={() => buyer.cancelSubscription.execute({ orderId: sub.id })}>Cancel</button>}
           {sub.status === "canceling" && (
-            <button onClick={() => buyer.reactivateSubscription.execute({ orderId: sub.id })}>
-              Undo Cancellation
-            </button>
+            <button onClick={() => buyer.reactivateSubscription.execute({ orderId: sub.id })}>Undo Cancellation</button>
           )}
         </div>
       ))}
 
       {/* Order history */}
       {orders?.onetimeOrders.map((order) => (
-        <p key={order.id}>{order.product?.name} — {order.status}</p>
+        <p key={order.id}>
+          {order.product?.name} — {order.status}
+        </p>
       ))}
     </div>
   );
@@ -282,12 +283,12 @@ function AccountPage() {
 
 ### Buyer Hooks
 
-| Hook | Returns | Auto-fetches? |
-|------|---------|:-------------:|
-| `useBuyer()` | `cancelSubscription`, `cancelOnetimeOrder`, `reactivateSubscription`, `createRefundTicket`, `resubmitRefundTicket`, `query` | No — call `.execute()` |
-| `useBuyerOrders()` | `{ onetimeOrders, subscriptionOrders }` with product, payments, billing cycle | Yes |
-| `useBuyerPayments()` | Payment records — amount, status, failure reason | Yes |
-| `useBuyerRefundTickets()` | Refund tickets — status, reason, amount | Yes |
+| Hook                      | Returns                                                                                                                     |     Auto-fetches?      |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------- | :--------------------: |
+| `useBuyer()`              | `cancelSubscription`, `cancelOnetimeOrder`, `reactivateSubscription`, `createRefundTicket`, `resubmitRefundTicket`, `query` | No — call `.execute()` |
+| `useBuyerOrders()`        | `{ onetimeOrders, subscriptionOrders }` with product, payments, billing cycle                                               |          Yes           |
+| `useBuyerPayments()`      | Payment records — amount, status, failure reason                                                                            |          Yes           |
+| `useBuyerRefundTickets()` | Refund tickets — status, reason, amount                                                                                     |          Yes           |
 
 Action hooks return `{ execute, isLoading, error, data }`. Data hooks return `{ data, isLoading, error, refetch }`.
 
@@ -315,12 +316,12 @@ All merchant hooks return `{ data, isLoading, error, refetch }`.
 
 ## Server Actions
 
-| Factory | Returns | Description |
-|---------|---------|-------------|
-| `createCheckoutAction(config)` | `CheckoutAction` | Checkout session creation (anonymous + authenticated) |
-| `createBuyerTokenAction(config)` | `BuyerTokenAction` | Buyer session token issuance |
-| `createBuyerSessionAction(config)` | `BuyerSessionAction` | Buyer self-service operations |
-| `createMerchantQueryAction(config)` | `MerchantQueryAction` | Merchant GraphQL queries |
+| Factory                             | Returns               | Description                                           |
+| ----------------------------------- | --------------------- | ----------------------------------------------------- |
+| `createCheckoutAction(config)`      | `CheckoutAction`      | Checkout session creation (anonymous + authenticated) |
+| `createBuyerTokenAction(config)`    | `BuyerTokenAction`    | Buyer session token issuance                          |
+| `createBuyerSessionAction(config)`  | `BuyerSessionAction`  | Buyer self-service operations                         |
+| `createMerchantQueryAction(config)` | `MerchantQueryAction` | Merchant GraphQL queries                              |
 
 Import from `@waffo/pancake-nextjs/server`. Config requires `merchantId` and `privateKey`.
 
@@ -328,11 +329,11 @@ Import from `@waffo/pancake-nextjs/server`. Config requires `merchantId` and `pr
 
 ### Classes & Enums
 
-| Export | Description |
-|--------|-------------|
-| `WaffoPancakeError` | API error with HTTP status and call-stack errors |
-| `TaxCategory` | `DigitalGoods`, `SaaS`, `Software`, `Ebook`, `OnlineCourse`, `Consulting`, `ProfessionalService` |
-| `WebhookEventType` | `OrderCompleted`, `SubscriptionActivated`, `SubscriptionCanceled`, etc. |
+| Export              | Description                                                                                      |
+| ------------------- | ------------------------------------------------------------------------------------------------ |
+| `WaffoPancakeError` | API error with HTTP status and call-stack errors                                                 |
+| `TaxCategory`       | `DigitalGoods`, `SaaS`, `Software`, `Ebook`, `OnlineCourse`, `Consulting`, `ProfessionalService` |
+| `WebhookEventType`  | `OrderCompleted`, `SubscriptionActivated`, `SubscriptionCanceled`, etc.                          |
 
 ### Types
 

@@ -4,6 +4,15 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-04-15
+
+### Documentation
+
+- **`<CheckoutButton type="authenticated">` examples** — README and JSDoc updated to show `buyerIdentity` and `buyerEmail` as independent inputs. `buyerIdentity` is for order attribution and trial tracking only and is not rendered on the checkout page; pass `buyerEmail` explicitly to pre-fill the email input. Examples now use `buyerIdentity={user.id}` to demonstrate that identity can be any merchant-controlled identifier.
+- **`<WaffoPancakeProvider>` JSDoc** — `buyer.identity` example switched to `user.id` with a note clarifying the value must match the `buyerIdentity` used at checkout time, since buyer-portal lookups are keyed by `merchant_provided_buyer_identity`.
+
+Reflects the upstream behavior change in `@waffo/pancake-ts@0.4.0`.
+
 ## [0.1.0] - 2026-04-10
 
 ### Added
