@@ -6,7 +6,7 @@ import { PancakeContext } from "./provider.js";
 import { useQuery } from "./use-query.js";
 
 import type { QueryState } from "./use-query.js";
-import type { GraphQLResponse } from "@waffo/pancake-ts";
+import type { GraphQLResponse, RefundTicketVersionData } from "@waffo/pancake-ts";
 
 // ============================================================
 // Types
@@ -54,17 +54,14 @@ export interface BuyerPayment {
  * Ticket-level fields are flat; per-version fields (`reason`, `requestedAmount`)
  * live under `versionData` because the buyer can resubmit a rejected ticket and
  * each submission is a versioned record. `versionData` reflects the current
- * (latest) version. `requestedAmount.amount` is a display-formatted string.
+ * (latest) version. The `versionData` shape is shared with `@waffo/pancake-ts`'s
+ * `RefundTicketVersionData`.
  */
 export interface BuyerRefundTicket {
   id: string;
   status: string;
   versionNumber: number | null;
-  versionData: {
-    reason: string;
-    /** `null` if the ticket version has no requested amount recorded */
-    requestedAmount: { amount: string; currency: string } | null;
-  } | null;
+  versionData: RefundTicketVersionData | null;
   createdAt: string;
 }
 

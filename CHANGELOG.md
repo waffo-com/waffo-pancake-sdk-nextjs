@@ -14,6 +14,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 - **`useMerchantSales`** — `SalesOverview.totalRevenue` and `SalesOverview.revenueByPeriod[].amount` are now display-formatted strings (e.g. `"9.99"`) instead of minor-currency-unit strings. The TypeScript type is unchanged (`string`), but consumers must drop any `parseInt() / 100` or similar conversion. JSDoc updated to reflect the semantic. Aligns with `waffo-pancake-graphql-service` v2026.04.15.1.
 
+### Changed
+
+- **Dependency `@waffo/pancake-ts` bumped to `^0.4.1`** — to pick up the new `RefundTicketVersionData` type. `BuyerRefundTicket.versionData` now uses that shared type instead of a locally redefined one.
+
+### Added
+
+- **Re-exports from `@waffo/pancake-ts`** — `RequestedAmount` and `RefundTicketVersionData` are now re-exported from this package for direct use in client components.
+
 ## [0.1.1] - 2026-04-15
 
 ### Documentation
