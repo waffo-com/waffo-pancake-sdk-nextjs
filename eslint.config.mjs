@@ -145,14 +145,14 @@ const eslintConfig = defineConfig([
 
   // Relax naming convention for config files
   {
-    files: ["eslint.config.mjs", "vitest.config.ts", "tsup.config.ts", "commitlint.config.js"],
+    files: ["eslint.config.mjs", "vitest.config.ts", "tsup.config.ts"],
     rules: {
       "@typescript-eslint/naming-convention": "off",
     },
   },
 
   // Global ignores
-  globalIgnores(["dist/**", "node_modules/**", "coverage/**"]),
+  globalIgnores(["dist/**", "node_modules/**", "coverage/**", "commitlint.config.cjs"]),
 ]);
 
 export default eslintConfig;
