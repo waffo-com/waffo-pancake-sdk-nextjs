@@ -4,6 +4,12 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-04-18
+
+### Changed
+
+- **Dependency `@waffo/pancake-ts` bumped to `^0.5.0`** — picks up enriched `WebhookEventData` with full transaction chain fields (order status, payment details, subscription info, refund data, metadata). Webhook handlers automatically receive the new fields via the existing `EventHandler<WebhookEventData>` generic type.
+
 ## [0.1.2] - 2026-04-15
 
 ### Fixed
