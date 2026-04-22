@@ -1,6 +1,6 @@
 {
   "name": "@waffo/pancake-nextjs",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Next.js SDK for Waffo Pancake — checkout components and hooks",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -30,6 +30,7 @@
   },
   "files": [
     "dist",
+    "LICENSE",
     "CHANGELOG.md"
   ],
   "scripts": {
