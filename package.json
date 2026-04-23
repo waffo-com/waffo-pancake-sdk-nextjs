@@ -40,9 +40,13 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "prepare": "husky",
-    "prepublishOnly": "npm run lint && npm run test && npm run build"
+    "prepublishOnly": "npm run lint && npm run test && npm run build",
+    "prepare": "husky"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "MIT",
   "dependencies": {
     "@waffo/pancake-ts": "^0.5.0",
     "next": ">=14.0.0",
@@ -82,10 +86,6 @@
     ],
     "*.{json,md,css}": "prettier --write"
   },
-  "engines": {
-    "node": ">=20.0.0"
-  },
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/waffo-com/waffo-pancake-sdk-nextjs.git"
