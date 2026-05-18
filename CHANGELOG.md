@@ -4,6 +4,17 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] - 2026-05-17
+
+### Changed
+
+- **Bumped peer `@waffo/pancake-ts` to `^0.8.0`** to pick up the envelope-unification fixes:
+  - GraphQL queries now actually return data (prior `@waffo/pancake-ts` versions stripped one envelope layer too many, leaving `result.data` undefined). `use-merchant-data.ts` and `use-buyer-data.ts` hooks transitively benefit.
+  - GraphQL queries no longer carry `X-Idempotency-Key`, so subsequent identical queries hit the live DB instead of the gateway's 24h cache.
+  - REST `warnings` (with `aiHint` migration notices) are no longer dropped on the way back through the SDK.
+
+No source changes in this package; behavior changes flow through `@waffo/pancake-ts`. See [`@waffo/pancake-ts` 0.8.0 release notes](../waffo-pancake-sdk-ts/CHANGELOG.md#080---2026-05-17) for full details and caller migration guidance.
+
 ## [0.1.5] - 2026-04-22
 
 ### Added
