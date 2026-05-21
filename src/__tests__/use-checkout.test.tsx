@@ -94,10 +94,7 @@ describe("useCheckout", () => {
         result.current.checkout();
       });
 
-      expect(window.open).toHaveBeenCalledWith(
-        "https://pancake.waffo.ai/store/my-store/product/PROD_xxx?currency=USD",
-        "_blank",
-      );
+      expect(window.open).toHaveBeenCalledWith("https://pancake.waffo.ai/store/my-store/product/PROD_xxx?currency=USD", "_blank");
     });
   });
 
@@ -115,6 +112,25 @@ describe("useCheckout", () => {
       expect(action).toHaveBeenCalled();
       expect(window.location.href).toBe("https://checkout.example.com/cs_123");
       expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ sessionId: "cs_123" }));
+    });
+
+    it("should forward orderMerchantExternalId to the server action", async () => {
+      const action = createMockAction();
+      const { result } = renderHook(() =>
+        useCheckout({
+          action,
+          productId: "PROD_xxx",
+          currency: "USD",
+          orderMerchantExternalId: "ORDER-2026-00891",
+        }),
+      );
+
+      await act(async () => {
+        result.current.checkout();
+        await new Promise((r) => setTimeout(r, 10));
+      });
+
+      expect(action).toHaveBeenCalledWith(expect.objectContaining({ orderMerchantExternalId: "ORDER-2026-00891" }));
     });
   });
 

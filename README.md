@@ -118,6 +118,8 @@ import { checkout } from "./lib/waffo";
 </CheckoutButton>
 ```
 
+Pass an optional `orderMerchantExternalId` to attach your internal order reference — see [Business-Side Identifiers](#business-side-identifiers).
+
 ### Authenticated Checkout (Recommended)
 
 Creates a session **and** a token bound to the buyer you provide. `buyerIdentity` is for order attribution and trial tracking — it is not rendered on the checkout page. To pre-fill the email field on the checkout form, pass `buyerEmail` explicitly.
@@ -146,7 +148,7 @@ import { checkout } from "./lib/waffo";
   Upgrade — $7.99/mo
 </CheckoutButton>
 
-// Full pre-fill — identity + email + billing + skip trial
+// Full pre-fill — identity + email + billing + skip trial + your internal order ref
 <CheckoutButton
   type="authenticated"
   action={checkout}
@@ -157,6 +159,7 @@ import { checkout } from "./lib/waffo";
   billingDetail={{ country: "US", isBusiness: true, state: "CA" }}
   withTrial={false}
   successUrl="https://example.com/dashboard?upgraded=true"
+  orderMerchantExternalId={internalOrderId} // optional, see Business-Side Identifiers below
 >
   Skip Trial, Start Now
 </CheckoutButton>
@@ -217,6 +220,11 @@ export const POST = Webhook({
     await revokeAccess(event.data.orderId);
   },
   onRefundSucceeded: async (event) => {
+    // refund.* events carry both business identifiers (see Business-Side Identifiers section)
+    await markRefunded({
+      orderRef: event.data.orderMerchantExternalId,
+      refundTicketRef: event.data.refundTicketMerchantExternalId,
+    });
     await revokeAccess(event.data.orderId);
   },
 
@@ -276,6 +284,19 @@ function AccountPage() {
           {order.product?.name} — {order.status}
         </p>
       ))}
+
+      <button
+        onClick={() =>
+          buyer.createRefundTicket.execute({
+            paymentId: "PAY_xxx",
+            reason: "Product not as described",
+            requestedAmount: { amount: "29.00", currency: "USD" },
+            refundTicketMerchantExternalId: `REF-${Date.now()}`, // optional, see Business-Side Identifiers below
+          })
+        }
+      >
+        Request Refund
+      </button>
     </div>
   );
 }
@@ -291,6 +312,55 @@ function AccountPage() {
 | `useBuyerRefundTickets()` | Refund tickets — status, reason, amount                                                                                     |          Yes           |
 
 Action hooks return `{ execute, isLoading, error, data }`. Data hooks return `{ data, isLoading, error, refetch }`.
+
+## Business-Side Identifiers
+
+Attach your own internal references to a checkout or a refund ticket so cross-system reconciliation does not require Waffo IDs. Two flat keys, both optional (max 128 chars):
+
+| Field                            | Attach via                       | Inherited by                                  |
+| -------------------------------- | -------------------------------- | --------------------------------------------- |
+| `orderMerchantExternalId`        | `CheckoutButton` / `useCheckout` | `Order`, `Payment` (incl. renewals), `Refund` |
+| `refundTicketMerchantExternalId` | `useBuyer().createRefundTicket`  | `RefundTicket`, `Refund`                      |
+
+The same field name appears at every layer: prop / hook param, webhook payload (`event.data.orderMerchantExternalId` / `event.data.refundTicketMerchantExternalId`), and GraphQL types. A `refund.*` webhook event carries **both** keys (order key inherited from the originating order).
+
+```tsx
+// 1. Attach at checkout — value is bound to the order, every payment, and any
+//    later refund of this order.
+<CheckoutButton action={checkout} productId="PROD_xxx" currency="USD" orderMerchantExternalId={internalOrderId}>
+  Pay {internalOrderId}
+</CheckoutButton>;
+
+// 2. Attach at refund-ticket creation — value is bound to the ticket and the
+//    refund record once the PSP confirms.
+const buyer = useBuyer();
+await buyer.createRefundTicket.execute({
+  paymentId: "PAY_xxx",
+  reason: "Product not as described",
+  requestedAmount: { amount: "29.00", currency: "USD" },
+  refundTicketMerchantExternalId: internalRefundSlipId,
+});
+
+// 3. Read back from webhooks — same field name as you wrote.
+export const POST = Webhook({
+  onRefundSucceeded: async (event) => {
+    await ledger.markRefunded({
+      orderRef: event.data.orderMerchantExternalId, // from the originating order
+      refundTicketRef: event.data.refundTicketMerchantExternalId, // from the originating refund ticket
+    });
+  },
+});
+
+// 4. Query by reference via the buyer's GraphQL surface — same field name on every type.
+const result = await buyer.query({
+  query: `query ($ref: String!) {
+    onetimeOrders(filter: { orderMerchantExternalId: { eq: $ref } }) {
+      id status orderMerchantExternalId
+    }
+  }`,
+  variables: { ref: internalOrderId },
+});
+```
 
 ## Merchant Data
 

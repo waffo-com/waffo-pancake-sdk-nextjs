@@ -110,6 +110,26 @@ describe("useBuyer", () => {
     expect(result.current.createRefundTicket.data).toEqual({ id: "TKT_xxx", status: "pending" });
   });
 
+  it("should forward refundTicketMerchantExternalId to the server action", async () => {
+    const ctx = createMockContext();
+    const { result } = renderHook(() => useBuyer(), { wrapper: createWrapper(ctx) });
+
+    await act(async () => {
+      await result.current.createRefundTicket.execute({
+        paymentId: "PAY_xxx",
+        reason: "Not as described",
+        requestedAmount: { amount: "29.00", currency: "USD" },
+        refundTicketMerchantExternalId: "REF-2026-00891",
+      });
+    });
+
+    expect(ctx.buyerSessionAction).toHaveBeenCalledWith(
+      "tok_abc",
+      "createRefundTicket",
+      expect.objectContaining({ refundTicketMerchantExternalId: "REF-2026-00891" }),
+    );
+  });
+
   it("should execute GraphQL query", async () => {
     const ctx = createMockContext();
     const { result } = renderHook(() => useBuyer(), { wrapper: createWrapper(ctx) });
