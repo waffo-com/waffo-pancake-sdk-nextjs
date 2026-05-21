@@ -4,6 +4,12 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] - 2026-05-21
+
+### Changed
+
+- **Bumped peer `@waffo/pancake-ts` to `^0.9.0`** to pick up the new flat dual-key external-id fields. The wrapper surfaces these transparently — `CheckoutButton` / `useCheckout` now accept `orderMerchantExternalId`; `useBuyer().createRefundTicket` accepts `refundTicketMerchantExternalId`. See [`@waffo/pancake-ts@0.9.0` CHANGELOG](https://github.com/waffo-com/waffo-pancake-sdk-ts/blob/main/CHANGELOG.md#090---2026-05-21) for the full additive surface.
+
 ## [0.1.6] - 2026-05-17
 
 ### Changed
