@@ -4,6 +4,12 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] - 2026-06-01
+
+### Changed
+
+- **Bumped peer `@waffo/pancake-ts` to `^0.10.0`** to pick up the full 19-field `NotificationSettings` schema and the merchant-writable type narrowing. The wrapper surfaces this transparently — any consumer reading `notificationSettings` via the wrapped client now gets the 11 newly added boolean toggles (`emailTrialStarted/Ending` + 9 `notify*` for subscription/chargeback/payout). Direct callers of `client.stores.update({ notificationSettings: ... })` benefit from the new TS narrowing that rejects platform-managed `email*` keys at compile time. See [`@waffo/pancake-ts@0.10.0` CHANGELOG](https://github.com/waffo-com/waffo-pancake-sdk-ts/blob/main/CHANGELOG.md#0100---2026-06-01) for the full surface and migration guide.
+
 ## [0.1.7] - 2026-05-21
 
 ### Changed
