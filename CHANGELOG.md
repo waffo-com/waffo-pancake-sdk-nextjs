@@ -4,6 +4,12 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.9] - 2026-06-05
+
+### Changed
+
+- **Bumped peer `@waffo/pancake-ts` to `^0.11.0`** to pick up nullable `description` / `successUrl` on Create/Update Product params, aligning with backend product-service v2026.6.4 which accepts `null` (or `""`) to clear these fields and enforces `name ≤ 64 chars` to match the PSP `goodsName` cap. The wrapper passes through transparently — `useMerchant()` product mutations and any direct `client.onetimeProducts` / `client.subscriptionProducts` calls now accept `null` for these two fields. See [`@waffo/pancake-ts@0.11.0` CHANGELOG](https://github.com/waffo-com/waffo-pancake-sdk-ts/blob/main/CHANGELOG.md#0110---2026-06-05) for the migration diff.
+
 ## [0.1.8] - 2026-06-01
 
 ### Changed
