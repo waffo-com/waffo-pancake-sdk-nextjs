@@ -1,6 +1,6 @@
 {
   "name": "@waffo/pancake-nextjs",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Next.js SDK for Waffo Pancake — checkout components and hooks",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -48,7 +48,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@waffo/pancake-ts": "^0.10.0",
+    "@waffo/pancake-ts": "^0.11.0",
     "next": ">=14.0.0",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0"
