@@ -8,7 +8,7 @@
  * ```ts
  * // app/lib/waffo.ts
  * "use server";
- * import { createCheckoutAction, createBuyerTokenAction, createMerchantQueryAction } from "@waffo/pancake-nextjs/server";
+ * import { createCheckoutAction, createCustomerTokenAction, createMerchantQueryAction } from "@waffo/pancake-nextjs/server";
  *
  * const config = {
  *   merchantId: process.env.WAFFO_MERCHANT_ID!,
@@ -16,7 +16,7 @@
  * };
  *
  * export const checkout = createCheckoutAction(config);
- * export const issueBuyerToken = createBuyerTokenAction(config);
+ * export const issueCustomerToken = createCustomerTokenAction(config);
  * export const merchantQuery = createMerchantQueryAction(config);
  * ```
  */
@@ -84,14 +84,14 @@ export function createCheckoutAction(config: WaffoPancakeConfig): CheckoutAction
 }
 
 // ============================================================
-// Buyer Token Action
+// Customer Token Action
 // ============================================================
 
-/** Server action signature for issuing buyer tokens */
-export type BuyerTokenAction = (params: IssueSessionTokenParams) => Promise<SessionToken>;
+/** Server action signature for issuing customer tokens */
+export type CustomerTokenAction = (params: IssueSessionTokenParams) => Promise<SessionToken>;
 
 /**
- * Create a server action that issues buyer session tokens.
+ * Create a server action that issues customer session tokens.
  *
  * @param config - WaffoPancake client configuration
  * @returns A server action function
@@ -99,15 +99,15 @@ export type BuyerTokenAction = (params: IssueSessionTokenParams) => Promise<Sess
  * @example
  * ```ts
  * "use server";
- * import { createBuyerTokenAction } from "@waffo/pancake-nextjs/server";
+ * import { createCustomerTokenAction } from "@waffo/pancake-nextjs/server";
  *
- * export const issueBuyerToken = createBuyerTokenAction({
+ * export const issueCustomerToken = createCustomerTokenAction({
  *   merchantId: process.env.WAFFO_MERCHANT_ID!,
  *   privateKey: process.env.WAFFO_PRIVATE_KEY!,
  * });
  * ```
  */
-export function createBuyerTokenAction(config: WaffoPancakeConfig): BuyerTokenAction {
+export function createCustomerTokenAction(config: WaffoPancakeConfig): CustomerTokenAction {
   const client = new WaffoPancake(config);
 
   return async (params: IssueSessionTokenParams): Promise<SessionToken> => {
@@ -116,11 +116,11 @@ export function createBuyerTokenAction(config: WaffoPancakeConfig): BuyerTokenAc
 }
 
 // ============================================================
-// Buyer Session Action
+// Customer Session Action
 // ============================================================
 
-/** Buyer action types */
-export type BuyerSessionActionType =
+/** Customer action types */
+export type CustomerSessionActionType =
   | "cancelSubscription"
   | "cancelOnetimeOrder"
   | "reactivateSubscription"
@@ -128,11 +128,11 @@ export type BuyerSessionActionType =
   | "resubmitRefundTicket"
   | "query";
 
-/** Server action signature for buyer session operations */
-export type BuyerSessionAction = (token: string, actionType: BuyerSessionActionType, params: unknown) => Promise<unknown>;
+/** Server action signature for customer session operations */
+export type CustomerSessionAction = (token: string, actionType: CustomerSessionActionType, params: unknown) => Promise<unknown>;
 
 /**
- * Create a server action that executes buyer self-service operations.
+ * Create a server action that executes customer self-service operations.
  *
  * @param config - WaffoPancake client configuration
  * @returns A server action function
@@ -140,34 +140,34 @@ export type BuyerSessionAction = (token: string, actionType: BuyerSessionActionT
  * @example
  * ```ts
  * "use server";
- * import { createBuyerSessionAction } from "@waffo/pancake-nextjs/server";
+ * import { createCustomerSessionAction } from "@waffo/pancake-nextjs/server";
  *
- * export const buyerAction = createBuyerSessionAction({
+ * export const customerAction = createCustomerSessionAction({
  *   merchantId: process.env.WAFFO_MERCHANT_ID!,
  *   privateKey: process.env.WAFFO_PRIVATE_KEY!,
  * });
  * ```
  */
-export function createBuyerSessionAction(config: WaffoPancakeConfig): BuyerSessionAction {
+export function createCustomerSessionAction(config: WaffoPancakeConfig): CustomerSessionAction {
   const client = new WaffoPancake(config);
 
-  return async (token: string, actionType: BuyerSessionActionType, params: unknown): Promise<unknown> => {
-    const buyer = client.buyer(token);
+  return async (token: string, actionType: CustomerSessionActionType, params: unknown): Promise<unknown> => {
+    const customer = client.buyer(token);
     switch (actionType) {
       case "cancelSubscription":
-        return buyer.cancelSubscription(params as Parameters<typeof buyer.cancelSubscription>[0]);
+        return customer.cancelSubscription(params as Parameters<typeof customer.cancelSubscription>[0]);
       case "cancelOnetimeOrder":
-        return buyer.cancelOnetimeOrder(params as Parameters<typeof buyer.cancelOnetimeOrder>[0]);
+        return customer.cancelOnetimeOrder(params as Parameters<typeof customer.cancelOnetimeOrder>[0]);
       case "reactivateSubscription":
-        return buyer.reactivateSubscription(params as Parameters<typeof buyer.reactivateSubscription>[0]);
+        return customer.reactivateSubscription(params as Parameters<typeof customer.reactivateSubscription>[0]);
       case "createRefundTicket":
-        return buyer.createRefundTicket(params as Parameters<typeof buyer.createRefundTicket>[0]);
+        return customer.createRefundTicket(params as Parameters<typeof customer.createRefundTicket>[0]);
       case "resubmitRefundTicket":
-        return buyer.resubmitRefundTicket(params as Parameters<typeof buyer.resubmitRefundTicket>[0]);
+        return customer.resubmitRefundTicket(params as Parameters<typeof customer.resubmitRefundTicket>[0]);
       case "query":
-        return buyer.graphql.query(params as GraphQLParams);
+        return customer.graphql.query(params as GraphQLParams);
       default:
-        throw new Error(`Unknown buyer action: ${actionType}`);
+        throw new Error(`Unknown customer action: ${actionType}`);
     }
   };
 }
@@ -203,3 +203,22 @@ export function createMerchantQueryAction(config: WaffoPancakeConfig): MerchantQ
     return client.graphql.query(params);
   };
 }
+
+// ============================================================
+// Deprecated Aliases
+// ============================================================
+
+/** @deprecated Use {@link CustomerTokenAction} instead. */
+export type BuyerTokenAction = CustomerTokenAction;
+
+/** @deprecated Use {@link createCustomerTokenAction} instead. */
+export const createBuyerTokenAction = createCustomerTokenAction;
+
+/** @deprecated Use {@link CustomerSessionActionType} instead. */
+export type BuyerSessionActionType = CustomerSessionActionType;
+
+/** @deprecated Use {@link CustomerSessionAction} instead. */
+export type BuyerSessionAction = CustomerSessionAction;
+
+/** @deprecated Use {@link createCustomerSessionAction} instead. */
+export const createBuyerSessionAction = createCustomerSessionAction;

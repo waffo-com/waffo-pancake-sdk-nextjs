@@ -2,21 +2,24 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import type { BuyerTokenAction, BuyerSessionAction } from "./server.js";
+import type { CustomerTokenAction, CustomerSessionAction } from "./server.js";
 
-/** Buyer configuration for automatic token management */
-export interface BuyerConfig {
-  /** Buyer identity (email or merchant-provided identifier) */
+/** Customer configuration for automatic token management */
+export interface CustomerConfig {
+  /** Customer identity (email or merchant-provided identifier) */
   identity: string;
   /** Store ID (optional when `productId` is provided) */
   storeId?: string;
   /** Product ID — used to derive the store when `storeId` is omitted */
   productId?: string;
-  /** Server action for issuing tokens — from `createBuyerTokenAction()` */
-  issueToken: BuyerTokenAction;
-  /** Server action for buyer operations — from `createBuyerSessionAction()` */
-  sessionAction: BuyerSessionAction;
+  /** Server action for issuing tokens — from `createCustomerTokenAction()` */
+  issueToken: CustomerTokenAction;
+  /** Server action for customer operations — from `createCustomerSessionAction()` */
+  sessionAction: CustomerSessionAction;
 }
+
+/** @deprecated Use {@link CustomerConfig} instead. */
+export type BuyerConfig = CustomerConfig;
 
 interface TokenState {
   token: string;
@@ -25,14 +28,14 @@ interface TokenState {
 
 /** @internal */
 export interface PancakeContextValue {
-  /** Get a valid buyer token (auto-refreshes if expired) */
-  getBuyerToken: () => Promise<string>;
-  /** Execute a buyer session operation via server action */
-  buyerSessionAction: BuyerSessionAction;
-  /** Whether buyer config is provided */
-  hasBuyer: boolean;
+  /** Get a valid customer token (auto-refreshes if expired) */
+  getCustomerToken: () => Promise<string>;
+  /** Execute a customer session operation via server action */
+  customerSessionAction: CustomerSessionAction;
+  /** Whether customer config is provided */
+  hasCustomer: boolean;
   /** Whether the initial token is ready */
-  isBuyerReady: boolean;
+  isCustomerReady: boolean;
 }
 
 /** @internal Exported for direct useContext access in hooks */
@@ -42,48 +45,54 @@ export const PancakeContext = createContext<PancakeContextValue | null>(null);
 const REFRESH_BUFFER_MS = 30_000;
 
 export interface WaffoPancakeProviderProps {
-  /** Buyer configuration for automatic token management */
-  buyer: BuyerConfig;
+  /** Customer configuration for automatic token management */
+  customer?: CustomerConfig;
+  /** @deprecated Use `customer` instead. */
+  buyer?: CustomerConfig;
   children: React.ReactNode;
 }
 
 /**
- * Provider that manages buyer token lifecycle via server actions.
+ * Provider that manages customer token lifecycle via server actions.
  *
  * Auto-issues session tokens on mount and refreshes before expiry.
- * All buyer hooks (`useBuyer`, `useBuyerOrders`, etc.) read from context.
+ * All customer hooks (`useCustomer`, `useCustomerOrders`, etc.) read from context.
  *
- * The private key never leaves the server — token issuance and buyer
+ * The private key never leaves the server — token issuance and customer
  * operations are delegated to server actions.
  *
  * @param props - Provider configuration
- * @param props.buyer - Buyer identity and server actions
+ * @param props.customer - Customer identity and server actions
+ * @param props.buyer - Deprecated alias of `customer`
  * @param props.children - React children
  *
  * @example
  * ```tsx
  * // identity must match what you passed as `buyerIdentity` at checkout time —
- * // buyer-portal lookups are keyed by merchant_provided_buyer_identity
- * <WaffoPancakeProvider buyer={{
+ * // customer-portal lookups are keyed by merchant_provided_buyer_identity
+ * <WaffoPancakeProvider customer={{
  *   identity: user.id,
  *   storeId: "STO_xxx",
- *   issueToken,       // from createBuyerTokenAction()
- *   sessionAction,    // from createBuyerSessionAction()
+ *   issueToken,       // from createCustomerTokenAction()
+ *   sessionAction,    // from createCustomerSessionAction()
  * }}>
  *   <App />
  * </WaffoPancakeProvider>
  * ```
  */
-export function WaffoPancakeProvider({ buyer, children }: WaffoPancakeProviderProps) {
+export function WaffoPancakeProvider({ customer, buyer, children }: WaffoPancakeProviderProps) {
+  const config = customer ?? buyer;
+  if (!config) throw new Error("WaffoPancakeProvider: the `customer` prop is required");
+
   const tokenRef = useRef<TokenState | null>(null);
   const refreshPromiseRef = useRef<Promise<string> | null>(null);
-  const [isBuyerReady, setIsBuyerReady] = useState(false);
+  const [isCustomerReady, setIsCustomerReady] = useState(false);
 
   const refreshToken = useCallback(async (): Promise<string> => {
-    const result = await buyer.issueToken({
-      buyerIdentity: buyer.identity,
-      storeId: buyer.storeId,
-      productId: buyer.productId,
+    const result = await config.issueToken({
+      buyerIdentity: config.identity,
+      storeId: config.storeId,
+      productId: config.productId,
     });
 
     tokenRef.current = {
@@ -92,9 +101,9 @@ export function WaffoPancakeProvider({ buyer, children }: WaffoPancakeProviderPr
     };
 
     return result.token;
-  }, [buyer]);
+  }, [config]);
 
-  const getBuyerToken = useCallback(async (): Promise<string> => {
+  const getCustomerToken = useCallback(async (): Promise<string> => {
     const current = tokenRef.current;
     if (current && Date.now() < current.expiresAt - REFRESH_BUFFER_MS) {
       return current.token;
@@ -113,18 +122,18 @@ export function WaffoPancakeProvider({ buyer, children }: WaffoPancakeProviderPr
   // Issue initial token on mount
   useEffect(() => {
     refreshToken()
-      .then(() => setIsBuyerReady(true))
-      .catch(() => setIsBuyerReady(true));
+      .then(() => setIsCustomerReady(true))
+      .catch(() => setIsCustomerReady(true));
   }, [refreshToken]);
 
   const value = useMemo<PancakeContextValue>(
     () => ({
-      getBuyerToken,
-      buyerSessionAction: buyer.sessionAction,
-      hasBuyer: true,
-      isBuyerReady,
+      getCustomerToken,
+      customerSessionAction: config.sessionAction,
+      hasCustomer: true,
+      isCustomerReady,
     }),
-    [getBuyerToken, buyer.sessionAction, isBuyerReady],
+    [getCustomerToken, config.sessionAction, isCustomerReady],
   );
 
   return <PancakeContext.Provider value={value}>{children}</PancakeContext.Provider>;

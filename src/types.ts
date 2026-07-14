@@ -1,6 +1,10 @@
 import type { CheckoutAction } from "./server.js";
-import type { AnonymousCheckoutParams, AuthenticatedCheckoutParams, CheckoutSessionResult, AuthenticatedCheckoutResult } from "@waffo/pancake-ts";
-
+import type {
+  AnonymousCheckoutParams,
+  AuthenticatedCheckoutParams,
+  CheckoutSessionResult,
+  AuthenticatedCheckoutResult,
+} from "@waffo/pancake-ts";
 
 /** Redirect mode for checkout navigation */
 export type CheckoutMode = "redirect" | "popup";
@@ -27,7 +31,7 @@ export interface LinkCheckoutProps extends CheckoutBaseOptions {
   productId: string;
   /** Currency code (ISO 4217). If omitted, product page auto-detects. */
   currency?: string;
-  /** Pre-fill buyer email */
+  /** Pre-fill customer email */
   email?: string;
   /** Redirect URL after successful payment */
   successUrl?: string;

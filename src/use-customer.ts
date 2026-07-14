@@ -18,8 +18,8 @@ import type {
   GraphQLResponse,
 } from "@waffo/pancake-ts";
 
-/** State of an async buyer action */
-export interface BuyerActionState<T = unknown> {
+/** State of an async customer action */
+export interface CustomerActionState<T = unknown> {
   /** Execute the action */
   execute: (params: T) => Promise<void>;
   /** Whether the action is in progress */
@@ -28,25 +28,25 @@ export interface BuyerActionState<T = unknown> {
   error: Error | null;
 }
 
-/** Return type of useBuyer hook */
-export interface UseBuyerReturn {
+/** Return type of useCustomer hook */
+export interface UseCustomerReturn {
   /** Cancel a subscription order */
-  cancelSubscription: BuyerActionState<CancelSubscriptionParams> & { data: CancelSubscriptionResult | null };
+  cancelSubscription: CustomerActionState<CancelSubscriptionParams> & { data: CancelSubscriptionResult | null };
   /** Cancel a one-time order */
-  cancelOnetimeOrder: BuyerActionState<CancelOnetimeOrderParams> & { data: CancelOnetimeOrderResult | null };
+  cancelOnetimeOrder: CustomerActionState<CancelOnetimeOrderParams> & { data: CancelOnetimeOrderResult | null };
   /** Reactivate a canceling subscription */
-  reactivateSubscription: BuyerActionState<ReactivateSubscriptionParams> & { data: ReactivateSubscriptionResult | null };
+  reactivateSubscription: CustomerActionState<ReactivateSubscriptionParams> & { data: ReactivateSubscriptionResult | null };
   /** Create a refund ticket */
-  createRefundTicket: BuyerActionState<CreateRefundTicketParams> & { data: RefundTicket | null };
+  createRefundTicket: CustomerActionState<CreateRefundTicketParams> & { data: RefundTicket | null };
   /** Resubmit a rejected refund ticket */
-  resubmitRefundTicket: BuyerActionState<ResubmitRefundTicketParams> & { data: RefundTicket | null };
+  resubmitRefundTicket: CustomerActionState<ResubmitRefundTicketParams> & { data: RefundTicket | null };
   /** Execute a GraphQL query */
   query: <T = Record<string, unknown>>(params: GraphQLParams) => Promise<GraphQLResponse<T>>;
 }
 
-function useBuyerAction<TParams, TResult>(
+function useCustomerAction<TParams, TResult>(
   actionFn: (params: TParams) => Promise<TResult>,
-): BuyerActionState<TParams> & { data: TResult | null } {
+): CustomerActionState<TParams> & { data: TResult | null } {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [data, setData] = useState<TResult | null>(null);
@@ -72,52 +72,52 @@ function useBuyerAction<TParams, TResult>(
 }
 
 /**
- * React hook for buyer self-service actions.
+ * React hook for customer self-service actions.
  *
  * Must be used within `<WaffoPancakeProvider>`. All operations are executed
  * via server actions — the private key never leaves the server.
  *
- * @returns Buyer action handlers with loading/error states
+ * @returns Customer action handlers with loading/error states
  *
  * @example
  * ```tsx
  * function AccountPage() {
- *   const buyer = useBuyer();
+ *   const customer = useCustomer();
  *   return (
- *     <button onClick={() => buyer.cancelSubscription.execute({ orderId: "ORD_xxx" })}>
+ *     <button onClick={() => customer.cancelSubscription.execute({ orderId: "ORD_xxx" })}>
  *       Cancel
  *     </button>
  *   );
  * }
  * ```
  */
-export function useBuyer(): UseBuyerReturn {
+export function useCustomer(): UseCustomerReturn {
   const ctx = useContext(PancakeContext);
-  if (!ctx) throw new Error("useBuyer: must be used within <WaffoPancakeProvider>");
+  if (!ctx) throw new Error("useCustomer: must be used within <WaffoPancakeProvider>");
 
-  const { getBuyerToken, buyerSessionAction } = ctx;
+  const { getCustomerToken, customerSessionAction } = ctx;
 
   const callAction = useCallback(
     async (actionType: string, params: unknown) => {
-      const token = await getBuyerToken();
-      return buyerSessionAction(token, actionType as never, params);
+      const token = await getCustomerToken();
+      return customerSessionAction(token, actionType as never, params);
     },
-    [getBuyerToken, buyerSessionAction],
+    [getCustomerToken, customerSessionAction],
   );
 
-  const cancelSubscription = useBuyerAction<CancelSubscriptionParams, CancelSubscriptionResult>(
+  const cancelSubscription = useCustomerAction<CancelSubscriptionParams, CancelSubscriptionResult>(
     useCallback((params) => callAction("cancelSubscription", params) as Promise<CancelSubscriptionResult>, [callAction]),
   );
 
-  const cancelOnetimeOrder = useBuyerAction<CancelOnetimeOrderParams, CancelOnetimeOrderResult>(
+  const cancelOnetimeOrder = useCustomerAction<CancelOnetimeOrderParams, CancelOnetimeOrderResult>(
     useCallback((params) => callAction("cancelOnetimeOrder", params) as Promise<CancelOnetimeOrderResult>, [callAction]),
   );
 
-  const reactivateSubscription = useBuyerAction<ReactivateSubscriptionParams, ReactivateSubscriptionResult>(
+  const reactivateSubscription = useCustomerAction<ReactivateSubscriptionParams, ReactivateSubscriptionResult>(
     useCallback((params) => callAction("reactivateSubscription", params) as Promise<ReactivateSubscriptionResult>, [callAction]),
   );
 
-  const createRefundTicket = useBuyerAction<CreateRefundTicketParams, { ticket: RefundTicket }>(
+  const createRefundTicket = useCustomerAction<CreateRefundTicketParams, { ticket: RefundTicket }>(
     useCallback((params) => callAction("createRefundTicket", params) as Promise<{ ticket: RefundTicket }>, [callAction]),
   );
   const createRefundTicketMapped = useMemo(
@@ -125,7 +125,7 @@ export function useBuyer(): UseBuyerReturn {
     [createRefundTicket],
   );
 
-  const resubmitRefundTicket = useBuyerAction<ResubmitRefundTicketParams, { ticket: RefundTicket }>(
+  const resubmitRefundTicket = useCustomerAction<ResubmitRefundTicketParams, { ticket: RefundTicket }>(
     useCallback((params) => callAction("resubmitRefundTicket", params) as Promise<{ ticket: RefundTicket }>, [callAction]),
   );
   const resubmitRefundTicketMapped = useMemo(
@@ -135,10 +135,10 @@ export function useBuyer(): UseBuyerReturn {
 
   const query = useCallback(
     async <T = Record<string, unknown>>(params: GraphQLParams) => {
-      const token = await getBuyerToken();
-      return buyerSessionAction(token, "query", params) as Promise<GraphQLResponse<T>>;
+      const token = await getCustomerToken();
+      return customerSessionAction(token, "query", params) as Promise<GraphQLResponse<T>>;
     },
-    [getBuyerToken, buyerSessionAction],
+    [getCustomerToken, customerSessionAction],
   );
 
   return {
@@ -150,3 +150,16 @@ export function useBuyer(): UseBuyerReturn {
     query,
   };
 }
+
+// ============================================================
+// Deprecated Aliases
+// ============================================================
+
+/** @deprecated Use {@link CustomerActionState} instead. */
+export type BuyerActionState<T = unknown> = CustomerActionState<T>;
+
+/** @deprecated Use {@link UseCustomerReturn} instead. */
+export type UseBuyerReturn = UseCustomerReturn;
+
+/** @deprecated Use {@link useCustomer} instead. */
+export const useBuyer = useCustomer;
