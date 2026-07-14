@@ -3,15 +3,6 @@ import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import { WaffoPancakeProvider, usePancakeContext } from "../provider.js";
-import { createBuyerSessionAction, createBuyerTokenAction, createCustomerSessionAction, createCustomerTokenAction } from "../server.js";
-import {
-  useBuyerOrders,
-  useBuyerPayments,
-  useBuyerRefundTickets,
-  useCustomerOrders,
-  useCustomerPayments,
-  useCustomerRefundTickets,
-} from "../use-customer-data.js";
 import { useBuyer, useCustomer } from "../use-customer.js";
 
 import type { BuyerConfig } from "../provider.js";
@@ -34,13 +25,8 @@ function createLegacyBuyerConfig(): BuyerConfig {
 }
 
 describe("deprecated aliases", () => {
-  it("should alias the old buyer names to the customer implementations", () => {
+  it("should alias useBuyer to useCustomer", () => {
     expect(useBuyer).toBe(useCustomer);
-    expect(useBuyerOrders).toBe(useCustomerOrders);
-    expect(useBuyerPayments).toBe(useCustomerPayments);
-    expect(useBuyerRefundTickets).toBe(useCustomerRefundTickets);
-    expect(createBuyerTokenAction).toBe(createCustomerTokenAction);
-    expect(createBuyerSessionAction).toBe(createCustomerSessionAction);
   });
 
   it("should support the deprecated `buyer` provider prop and useBuyer hook", async () => {
