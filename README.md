@@ -5,7 +5,7 @@ Next.js SDK for the [Waffo Pancake](https://waffo.ai) Merchant of Record (MoR) p
 - Three checkout modes: link (instant redirect), anonymous (API), authenticated (API + token)
 - Popup blocker avoidance — synchronous `window.open` in click handler
 - Webhook route handler with automatic signature verification and event dispatch
-- Buyer self-service hooks with automatic token lifecycle management
+- Customer self-service hooks with automatic token lifecycle management
 - Server action architecture — private keys never leave the server
 
 ## Installation
@@ -16,7 +16,7 @@ npm install @waffo/pancake-nextjs
 
 ## Quick Start
 
-> Most merchants create stores and products in the [Dashboard](https://pancake.waffo.ai/dashboard). This SDK is primarily used for **embedding checkout, webhooks, and buyer self-service** into your Next.js app.
+> Most merchants create stores and products in the [Dashboard](https://pancake.waffo.ai/dashboard). This SDK is primarily used for **embedding checkout, webhooks, and customer self-service** into your Next.js app.
 
 The fastest integration — a link checkout button, no API keys needed:
 
@@ -29,15 +29,15 @@ import { CheckoutButton } from "@waffo/pancake-nextjs";
 </CheckoutButton>;
 ```
 
-For API-level control (dynamic pricing, buyer identity, trial overrides), set up server actions first:
+For API-level control (dynamic pricing, customer identity, trial overrides), set up server actions first:
 
 ```ts
 // app/lib/waffo.ts — define once, import everywhere
 "use server";
 import {
   createCheckoutAction,
-  createBuyerTokenAction,
-  createBuyerSessionAction,
+  createCustomerTokenAction,
+  createCustomerSessionAction,
   createMerchantQueryAction,
 } from "@waffo/pancake-nextjs/server";
 
@@ -48,8 +48,8 @@ const config = {
 };
 
 export const checkout = createCheckoutAction(config);
-export const issueBuyerToken = createBuyerTokenAction(config);
-export const buyerAction = createBuyerSessionAction(config);
+export const issueCustomerToken = createCustomerTokenAction(config);
+export const customerAction = createCustomerSessionAction(config);
 export const merchantQuery = createMerchantQueryAction(config);
 ```
 
@@ -59,13 +59,13 @@ Private keys are captured in server action closures — they never reach the bro
 
 Waffo supports three checkout modes based on how much control the merchant needs:
 
-| Mode              | `type`            | Needs Server Action? | Use Case                                                                                |
-| ----------------- | ----------------- | :------------------: | --------------------------------------------------------------------------------------- |
-| **Link**          | `"link"`          |          No          | Landing pages, email campaigns. Redirects to product page which auto-creates a session. |
-| **Anonymous**     | omit              |         Yes          | API-level control without buyer identity. Buyer fills in details on checkout page.      |
-| **Authenticated** | `"authenticated"` |         Yes          | Merchant provides buyer identity. Form pre-filled. Enables buyer self-service.          |
+| Mode              | `type`            | Needs Server Action? | Use Case                                                                                 |
+| ----------------- | ----------------- | :------------------: | ---------------------------------------------------------------------------------------- |
+| **Link**          | `"link"`          |          No          | Landing pages, email campaigns. Redirects to product page which auto-creates a session.  |
+| **Anonymous**     | omit              |         Yes          | API-level control without customer identity. Customer fills in details on checkout page. |
+| **Authenticated** | `"authenticated"` |         Yes          | Merchant provides customer identity. Form pre-filled. Enables customer self-service.     |
 
-> **We recommend authenticated checkout whenever possible.** It binds orders to a stable merchant-controlled identifier. In anonymous mode, the buyer self-reports their email — if they enter a different address, previous orders become unlinked and subscription trial periods can be exploited.
+> **We recommend authenticated checkout whenever possible.** It binds orders to a stable merchant-controlled identifier. In anonymous mode, the customer self-reports their email — if they enter a different address, previous orders become unlinked and subscription trial periods can be exploited.
 
 ### Link Checkout
 
@@ -85,7 +85,7 @@ import { CheckoutButton } from "@waffo/pancake-nextjs";
   storeSlug="my-store"
   productId="PROD_xxx"
   currency="USD"
-  email="buyer@example.com"
+  email="customer@example.com"
   successUrl="https://example.com/thank-you"
   country="US"
   test={false}
@@ -122,13 +122,13 @@ Pass an optional `orderMerchantExternalId` to attach your internal order referen
 
 ### Authenticated Checkout (Recommended)
 
-Creates a session **and** a token bound to the buyer you provide. `buyerIdentity` is for order attribution and trial tracking — it is not rendered on the checkout page. To pre-fill the email field on the checkout form, pass `buyerEmail` explicitly.
+Creates a session **and** a token bound to the customer you provide. `buyerIdentity` is for order attribution and trial tracking — it is not rendered on the checkout page. To pre-fill the email field on the checkout form, pass `buyerEmail` explicitly.
 
 ```tsx
 import { CheckoutButton } from "@waffo/pancake-nextjs";
 import { checkout } from "./lib/waffo";
 
-// Basic — buyer identity only (checkout page email field stays empty)
+// Basic — customer identity only (checkout page email field stays empty)
 <CheckoutButton type="authenticated" action={checkout} productId="PROD_xxx" currency="USD" buyerIdentity={user.id}>
   Upgrade to Pro
 </CheckoutButton>
@@ -191,12 +191,12 @@ const { checkout, isLoading, error } = useCheckout({
 
 Both `CheckoutButton` and `useCheckout` support two navigation modes via the `mode` prop:
 
-- `"redirect"` (default) — navigates the current page. Buyer returns via `successUrl`.
+- `"redirect"` (default) — navigates the current page. Customer returns via `successUrl`.
 - `"popup"` — opens a new tab. Link mode opens the URL directly; API modes show a loading page first, then redirect once the session is ready.
 
 ## Webhook Verification
 
-After a buyer completes payment, Waffo sends webhook events to your server. The `Webhook` factory creates a Next.js route handler that verifies signatures and dispatches events:
+After a customer completes payment, Waffo sends webhook events to your server. The `Webhook` factory creates a Next.js route handler that verifies signatures and dispatches events:
 
 ```ts
 // app/api/webhooks/waffo/route.ts
@@ -237,18 +237,20 @@ export const POST = Webhook({
 
 Returns `200` on success, `401` on invalid signature, `500` if a handler throws. Full event list: `onOrderCompleted`, `onSubscriptionActivated`, `onSubscriptionPaymentSucceeded`, `onSubscriptionCanceling`, `onSubscriptionUncanceled`, `onSubscriptionUpdated`, `onSubscriptionCanceled`, `onSubscriptionPastDue`, `onRefundSucceeded`, `onRefundFailed`.
 
-## Buyer Self-Service
+## Customer Self-Service
 
-Beyond checkout, you can let buyers manage their own orders and subscriptions. Wrap with `WaffoPancakeProvider` — it auto-issues tokens and refreshes them before expiry:
+Beyond checkout, you can let customers manage their own orders and subscriptions. Wrap with `WaffoPancakeProvider` — it auto-issues tokens and refreshes them before expiry:
 
 ```tsx
-import { WaffoPancakeProvider, useBuyer, useBuyerOrders, useBuyerPayments, useBuyerRefundTickets } from "@waffo/pancake-nextjs";
-import { issueBuyerToken, buyerAction } from "./lib/waffo";
+import { WaffoPancakeProvider, useCustomer, useCustomerOrders, useCustomerPayments, useCustomerRefundTickets } from "@waffo/pancake-nextjs";
+import { issueCustomerToken, customerAction } from "./lib/waffo";
 
 // Wrap once — provider manages token lifecycle
 export default function AccountLayout({ user }: { user: { email: string } }) {
   return (
-    <WaffoPancakeProvider buyer={{ identity: user.email, storeId: "STO_xxx", issueToken: issueBuyerToken, sessionAction: buyerAction }}>
+    <WaffoPancakeProvider
+      customer={{ identity: user.email, storeId: "STO_xxx", issueToken: issueCustomerToken, sessionAction: customerAction }}
+    >
       <AccountPage />
     </WaffoPancakeProvider>
   );
@@ -256,10 +258,10 @@ export default function AccountLayout({ user }: { user: { email: string } }) {
 
 // All hooks work without passing token or client
 function AccountPage() {
-  const { data: orders, isLoading, refetch } = useBuyerOrders();
-  const { data: payments } = useBuyerPayments();
-  const { data: tickets } = useBuyerRefundTickets();
-  const buyer = useBuyer();
+  const { data: orders, isLoading, refetch } = useCustomerOrders();
+  const { data: payments } = useCustomerPayments();
+  const { data: tickets } = useCustomerRefundTickets();
+  const customer = useCustomer();
 
   if (isLoading) return <p>Loading...</p>;
 
@@ -271,9 +273,9 @@ function AccountPage() {
           <p>
             {sub.product?.name} — {sub.status}
           </p>
-          {sub.status === "active" && <button onClick={() => buyer.cancelSubscription.execute({ orderId: sub.id })}>Cancel</button>}
+          {sub.status === "active" && <button onClick={() => customer.cancelSubscription.execute({ orderId: sub.id })}>Cancel</button>}
           {sub.status === "canceling" && (
-            <button onClick={() => buyer.reactivateSubscription.execute({ orderId: sub.id })}>Undo Cancellation</button>
+            <button onClick={() => customer.reactivateSubscription.execute({ orderId: sub.id })}>Undo Cancellation</button>
           )}
         </div>
       ))}
@@ -287,7 +289,7 @@ function AccountPage() {
 
       <button
         onClick={() =>
-          buyer.createRefundTicket.execute({
+          customer.createRefundTicket.execute({
             paymentId: "PAY_xxx",
             reason: "Product not as described",
             requestedAmount: { amount: "29.00", currency: "USD" },
@@ -302,14 +304,14 @@ function AccountPage() {
 }
 ```
 
-### Buyer Hooks
+### Customer Hooks
 
-| Hook                      | Returns                                                                                                                     |     Auto-fetches?      |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------- | :--------------------: |
-| `useBuyer()`              | `cancelSubscription`, `cancelOnetimeOrder`, `reactivateSubscription`, `createRefundTicket`, `resubmitRefundTicket`, `query` | No — call `.execute()` |
-| `useBuyerOrders()`        | `{ onetimeOrders, subscriptionOrders }` with product, payments, billing cycle                                               |          Yes           |
-| `useBuyerPayments()`      | Payment records — amount, status, failure reason                                                                            |          Yes           |
-| `useBuyerRefundTickets()` | Refund tickets — status, reason, amount                                                                                     |          Yes           |
+| Hook                         | Returns                                                                                                                     |     Auto-fetches?      |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------- | :--------------------: |
+| `useCustomer()`              | `cancelSubscription`, `cancelOnetimeOrder`, `reactivateSubscription`, `createRefundTicket`, `resubmitRefundTicket`, `query` | No — call `.execute()` |
+| `useCustomerOrders()`        | `{ onetimeOrders, subscriptionOrders }` with product, payments, billing cycle                                               |          Yes           |
+| `useCustomerPayments()`      | Payment records — amount, status, failure reason                                                                            |          Yes           |
+| `useCustomerRefundTickets()` | Refund tickets — status, reason, amount                                                                                     |          Yes           |
 
 Action hooks return `{ execute, isLoading, error, data }`. Data hooks return `{ data, isLoading, error, refetch }`.
 
@@ -317,10 +319,10 @@ Action hooks return `{ execute, isLoading, error, data }`. Data hooks return `{ 
 
 Attach your own internal references to a checkout or a refund ticket so cross-system reconciliation does not require Waffo IDs. Two flat keys, both optional (max 128 chars):
 
-| Field                            | Attach via                       | Inherited by                                  |
-| -------------------------------- | -------------------------------- | --------------------------------------------- |
-| `orderMerchantExternalId`        | `CheckoutButton` / `useCheckout` | `Order`, `Payment` (incl. renewals), `Refund` |
-| `refundTicketMerchantExternalId` | `useBuyer().createRefundTicket`  | `RefundTicket`, `Refund`                      |
+| Field                            | Attach via                         | Inherited by                                  |
+| -------------------------------- | ---------------------------------- | --------------------------------------------- |
+| `orderMerchantExternalId`        | `CheckoutButton` / `useCheckout`   | `Order`, `Payment` (incl. renewals), `Refund` |
+| `refundTicketMerchantExternalId` | `useCustomer().createRefundTicket` | `RefundTicket`, `Refund`                      |
 
 The same field name appears at every layer: prop / hook param, webhook payload (`event.data.orderMerchantExternalId` / `event.data.refundTicketMerchantExternalId`), and GraphQL types. A `refund.*` webhook event carries **both** keys (order key inherited from the originating order).
 
@@ -333,8 +335,8 @@ The same field name appears at every layer: prop / hook param, webhook payload (
 
 // 2. Attach at refund-ticket creation — value is bound to the ticket and the
 //    refund record once the PSP confirms.
-const buyer = useBuyer();
-await buyer.createRefundTicket.execute({
+const customer = useCustomer();
+await customer.createRefundTicket.execute({
   paymentId: "PAY_xxx",
   reason: "Product not as described",
   requestedAmount: { amount: "29.00", currency: "USD" },
@@ -351,8 +353,8 @@ export const POST = Webhook({
   },
 });
 
-// 4. Query by reference via the buyer's GraphQL surface — same field name on every type.
-const result = await buyer.query({
+// 4. Query by reference via the customer's GraphQL surface — same field name on every type.
+const result = await customer.query({
   query: `query ($ref: String!) {
     onetimeOrders(filter: { orderMerchantExternalId: { eq: $ref } }) {
       id status orderMerchantExternalId
@@ -386,12 +388,12 @@ All merchant hooks return `{ data, isLoading, error, refetch }`.
 
 ## Server Actions
 
-| Factory                             | Returns               | Description                                           |
-| ----------------------------------- | --------------------- | ----------------------------------------------------- |
-| `createCheckoutAction(config)`      | `CheckoutAction`      | Checkout session creation (anonymous + authenticated) |
-| `createBuyerTokenAction(config)`    | `BuyerTokenAction`    | Buyer session token issuance                          |
-| `createBuyerSessionAction(config)`  | `BuyerSessionAction`  | Buyer self-service operations                         |
-| `createMerchantQueryAction(config)` | `MerchantQueryAction` | Merchant GraphQL queries                              |
+| Factory                               | Returns                 | Description                                           |
+| ------------------------------------- | ----------------------- | ----------------------------------------------------- |
+| `createCheckoutAction(config)`        | `CheckoutAction`        | Checkout session creation (anonymous + authenticated) |
+| `createCustomerTokenAction(config)`   | `CustomerTokenAction`   | Customer session token issuance                       |
+| `createCustomerSessionAction(config)` | `CustomerSessionAction` | Customer self-service operations                      |
+| `createMerchantQueryAction(config)`   | `MerchantQueryAction`   | Merchant GraphQL queries                              |
 
 Import from `@waffo/pancake-nextjs/server`. Config requires `merchantId` and `privateKey`.
 
@@ -407,7 +409,7 @@ Import from `@waffo/pancake-nextjs/server`. Config requires `merchantId` and `pr
 
 ### Types
 
-Key types: `PriceInfo`, `BillingDetail`, `WebhookEvent`, `CheckoutAction`, `BuyerTokenAction`, `BuyerSessionAction`, `MerchantQueryAction`, `BuyerConfig`, `CheckoutButtonProps`, `CheckoutMode`, `UseCheckoutReturn`, `UseBuyerReturn`, `BuyerActionState<T>`, `QueryState<T>`, `SalesOverview`, `SubscriptionOverview`, `WebhookConfig`.
+Key types: `PriceInfo`, `BillingDetail`, `WebhookEvent`, `CheckoutAction`, `CustomerTokenAction`, `CustomerSessionAction`, `MerchantQueryAction`, `CustomerConfig`, `CheckoutButtonProps`, `CheckoutMode`, `UseCheckoutReturn`, `UseCustomerReturn`, `CustomerActionState<T>`, `QueryState<T>`, `SalesOverview`, `SubscriptionOverview`, `WebhookConfig`.
 
 ## Development
 
@@ -429,8 +431,8 @@ src/
 ├── provider.tsx           # <WaffoPancakeProvider> — token lifecycle
 ├── checkout-button.tsx    # <CheckoutButton> component
 ├── use-checkout.ts        # useCheckout() — link + anonymous + authenticated
-├── use-buyer.ts           # useBuyer() — buyer actions
-├── use-buyer-data.ts      # useBuyerOrders / useBuyerPayments / useBuyerRefundTickets
+├── use-customer.ts        # useCustomer() — customer actions
+├── use-customer-data.ts   # useCustomerOrders / useCustomerPayments / useCustomerRefundTickets
 ├── use-merchant-data.ts   # useMerchantOrders / useMerchantSales / useMerchantSubscriptions
 ├── use-query.ts           # Shared useQuery helper
 ├── webhook.ts             # Webhook() route handler factory

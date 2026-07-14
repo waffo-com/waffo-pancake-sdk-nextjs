@@ -12,8 +12,8 @@ import type { GraphQLResponse, RefundTicketVersionData } from "@waffo/pancake-ts
 // Types
 // ============================================================
 
-/** A buyer's one-time order */
-export interface BuyerOnetimeOrder {
+/** A customer's one-time order */
+export interface CustomerOnetimeOrder {
   id: string;
   status: string;
   currency: string;
@@ -23,8 +23,8 @@ export interface BuyerOnetimeOrder {
   createdAt: string;
 }
 
-/** A buyer's subscription order */
-export interface BuyerSubscriptionOrder {
+/** A customer's subscription order */
+export interface CustomerSubscriptionOrder {
   id: string;
   status: string;
   currency: string;
@@ -37,8 +37,8 @@ export interface BuyerSubscriptionOrder {
   createdAt: string;
 }
 
-/** A buyer's payment record */
-export interface BuyerPayment {
+/** A customer's payment record */
+export interface CustomerPayment {
   id: string;
   orderId: string;
   status: string;
@@ -49,15 +49,15 @@ export interface BuyerPayment {
 }
 
 /**
- * A buyer's refund ticket.
+ * A customer's refund ticket.
  *
  * Ticket-level fields are flat; per-version fields (`reason`, `requestedAmount`)
- * live under `versionData` because the buyer can resubmit a rejected ticket and
+ * live under `versionData` because the customer can resubmit a rejected ticket and
  * each submission is a versioned record. `versionData` reflects the current
  * (latest) version. The `versionData` shape is shared with `@waffo/pancake-ts`'s
  * `RefundTicketVersionData`.
  */
-export interface BuyerRefundTicket {
+export interface CustomerRefundTicket {
   id: string;
   status: string;
   versionNumber: number | null;
@@ -69,7 +69,7 @@ export interface BuyerRefundTicket {
 // Queries
 // ============================================================
 
-const BUYER_ORDERS_QUERY = `query {
+const CUSTOMER_ORDERS_QUERY = `query {
   onetimeOrders(limit: 50) {
     id status currency buyerEmail createdAt
     product { id name }
@@ -82,13 +82,13 @@ const BUYER_ORDERS_QUERY = `query {
   }
 }`;
 
-const BUYER_PAYMENTS_QUERY = `query {
+const CUSTOMER_PAYMENTS_QUERY = `query {
   payments(limit: 50) {
     id orderId status snapshotDisplayAmount snapshotDisplayCurrency failureReason createdAt
   }
 }`;
 
-const BUYER_REFUND_TICKETS_QUERY = `query {
+const CUSTOMER_REFUND_TICKETS_QUERY = `query {
   refundTickets(limit: 50) {
     id status versionNumber
     versionData {
@@ -103,32 +103,32 @@ const BUYER_REFUND_TICKETS_QUERY = `query {
 // Internal helper
 // ============================================================
 
-function useBuyerQuery<T>(query: string): QueryState<T> {
+function useCustomerQuery<T>(query: string): QueryState<T> {
   const ctx = useContext(PancakeContext);
-  if (!ctx) throw new Error("Buyer data hook: must be used within <WaffoPancakeProvider>");
+  if (!ctx) throw new Error("Customer data hook: must be used within <WaffoPancakeProvider>");
 
-  const { getBuyerToken, buyerSessionAction, isBuyerReady } = ctx;
+  const { getCustomerToken, customerSessionAction, isCustomerReady } = ctx;
 
   const queryFn = useCallback(async () => {
-    const token = await getBuyerToken();
-    const result = (await buyerSessionAction(token, "query", { query })) as unknown as GraphQLResponse<T>;
+    const token = await getCustomerToken();
+    const result = (await customerSessionAction(token, "query", { query })) as unknown as GraphQLResponse<T>;
     return result.data as T;
-  }, [getBuyerToken, buyerSessionAction, query]);
+  }, [getCustomerToken, customerSessionAction, query]);
 
-  return useQuery(queryFn, isBuyerReady);
+  return useQuery(queryFn, isCustomerReady);
 }
 
 // ============================================================
 // Hooks
 // ============================================================
 
-interface BuyerOrdersData {
-  onetimeOrders: BuyerOnetimeOrder[];
-  subscriptionOrders: BuyerSubscriptionOrder[];
+interface CustomerOrdersData {
+  onetimeOrders: CustomerOnetimeOrder[];
+  subscriptionOrders: CustomerSubscriptionOrder[];
 }
 
 /**
- * Fetch the buyer's order history (one-time + subscription).
+ * Fetch the customer's order history (one-time + subscription).
  *
  * Must be used within `<WaffoPancakeProvider>`. Token is auto-managed.
  *
@@ -136,16 +136,16 @@ interface BuyerOrdersData {
  *
  * @example
  * ```tsx
- * const { data, isLoading, refetch } = useBuyerOrders();
+ * const { data, isLoading, refetch } = useCustomerOrders();
  * // data.onetimeOrders + data.subscriptionOrders
  * ```
  */
-export function useBuyerOrders(): QueryState<BuyerOrdersData> {
-  return useBuyerQuery<BuyerOrdersData>(BUYER_ORDERS_QUERY);
+export function useCustomerOrders(): QueryState<CustomerOrdersData> {
+  return useCustomerQuery<CustomerOrdersData>(CUSTOMER_ORDERS_QUERY);
 }
 
 /**
- * Fetch the buyer's payment history.
+ * Fetch the customer's payment history.
  *
  * Must be used within `<WaffoPancakeProvider>`. Token is auto-managed.
  *
@@ -153,16 +153,16 @@ export function useBuyerOrders(): QueryState<BuyerOrdersData> {
  *
  * @example
  * ```tsx
- * const { data: payments, isLoading } = useBuyerPayments();
+ * const { data: payments, isLoading } = useCustomerPayments();
  * ```
  */
-export function useBuyerPayments(): QueryState<BuyerPayment[]> {
-  const result = useBuyerQuery<{ payments: BuyerPayment[] }>(BUYER_PAYMENTS_QUERY);
+export function useCustomerPayments(): QueryState<CustomerPayment[]> {
+  const result = useCustomerQuery<{ payments: CustomerPayment[] }>(CUSTOMER_PAYMENTS_QUERY);
   return { ...result, data: result.data?.payments ?? null };
 }
 
 /**
- * Fetch the buyer's refund tickets.
+ * Fetch the customer's refund tickets.
  *
  * Must be used within `<WaffoPancakeProvider>`. Token is auto-managed.
  *
@@ -170,10 +170,35 @@ export function useBuyerPayments(): QueryState<BuyerPayment[]> {
  *
  * @example
  * ```tsx
- * const { data: tickets, isLoading } = useBuyerRefundTickets();
+ * const { data: tickets, isLoading } = useCustomerRefundTickets();
  * ```
  */
-export function useBuyerRefundTickets(): QueryState<BuyerRefundTicket[]> {
-  const result = useBuyerQuery<{ refundTickets: BuyerRefundTicket[] }>(BUYER_REFUND_TICKETS_QUERY);
+export function useCustomerRefundTickets(): QueryState<CustomerRefundTicket[]> {
+  const result = useCustomerQuery<{ refundTickets: CustomerRefundTicket[] }>(CUSTOMER_REFUND_TICKETS_QUERY);
   return { ...result, data: result.data?.refundTickets ?? null };
 }
+
+// ============================================================
+// Deprecated Aliases
+// ============================================================
+
+/** @deprecated Use {@link CustomerOnetimeOrder} instead. */
+export type BuyerOnetimeOrder = CustomerOnetimeOrder;
+
+/** @deprecated Use {@link CustomerSubscriptionOrder} instead. */
+export type BuyerSubscriptionOrder = CustomerSubscriptionOrder;
+
+/** @deprecated Use {@link CustomerPayment} instead. */
+export type BuyerPayment = CustomerPayment;
+
+/** @deprecated Use {@link CustomerRefundTicket} instead. */
+export type BuyerRefundTicket = CustomerRefundTicket;
+
+/** @deprecated Use {@link useCustomerOrders} instead. */
+export const useBuyerOrders = useCustomerOrders;
+
+/** @deprecated Use {@link useCustomerPayments} instead. */
+export const useBuyerPayments = useCustomerPayments;
+
+/** @deprecated Use {@link useCustomerRefundTickets} instead. */
+export const useBuyerRefundTickets = useCustomerRefundTickets;

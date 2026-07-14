@@ -4,19 +4,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { WaffoPancakeProvider, usePancakeContext, PancakeContext } from "../provider.js";
 
-import type { BuyerConfig } from "../provider.js";
-import type { BuyerTokenAction, BuyerSessionAction } from "../server.js";
+import type { CustomerConfig } from "../provider.js";
+import type { CustomerTokenAction, CustomerSessionAction } from "../server.js";
 
-function createMockBuyerConfig(overrides?: Partial<BuyerConfig>): BuyerConfig {
-  const issueToken: BuyerTokenAction = vi.fn().mockResolvedValue({
+function createMockCustomerConfig(overrides?: Partial<CustomerConfig>): CustomerConfig {
+  const issueToken: CustomerTokenAction = vi.fn().mockResolvedValue({
     token: "tok_initial",
     expiresAt: new Date(Date.now() + 120_000).toISOString(),
   });
 
-  const sessionAction: BuyerSessionAction = vi.fn().mockResolvedValue({ data: {} });
+  const sessionAction: CustomerSessionAction = vi.fn().mockResolvedValue({ data: {} });
 
   return {
-    identity: "buyer@example.com",
+    identity: "customer@example.com",
     storeId: "STO_xxx",
     issueToken,
     sessionAction,
@@ -30,10 +30,10 @@ describe("WaffoPancakeProvider", () => {
   });
 
   it("should render children", async () => {
-    const buyer = createMockBuyerConfig();
+    const customer = createMockCustomerConfig();
 
     render(
-      <WaffoPancakeProvider buyer={buyer}>
+      <WaffoPancakeProvider customer={customer}>
         <div data-testid="child">Hello</div>
       </WaffoPancakeProvider>,
     );
@@ -43,15 +43,15 @@ describe("WaffoPancakeProvider", () => {
   });
 
   it("should issue initial token on mount", async () => {
-    const buyer = createMockBuyerConfig();
+    const customer = createMockCustomerConfig();
 
     renderHook(() => usePancakeContext(), {
-      wrapper: ({ children }: { children: React.ReactNode }) => <WaffoPancakeProvider buyer={buyer}>{children}</WaffoPancakeProvider>,
+      wrapper: ({ children }: { children: React.ReactNode }) => <WaffoPancakeProvider customer={customer}>{children}</WaffoPancakeProvider>,
     });
 
     await waitFor(() => {
-      expect(buyer.issueToken).toHaveBeenCalledWith({
-        buyerIdentity: "buyer@example.com",
+      expect(customer.issueToken).toHaveBeenCalledWith({
+        buyerIdentity: "customer@example.com",
         storeId: "STO_xxx",
         productId: undefined,
       });
@@ -59,95 +59,97 @@ describe("WaffoPancakeProvider", () => {
   });
 
   it("should pass productId when provided", async () => {
-    const buyer = createMockBuyerConfig({ productId: "PROD_abc", storeId: undefined });
+    const customer = createMockCustomerConfig({ productId: "PROD_abc", storeId: undefined });
 
     renderHook(() => usePancakeContext(), {
-      wrapper: ({ children }: { children: React.ReactNode }) => <WaffoPancakeProvider buyer={buyer}>{children}</WaffoPancakeProvider>,
+      wrapper: ({ children }: { children: React.ReactNode }) => <WaffoPancakeProvider customer={customer}>{children}</WaffoPancakeProvider>,
     });
 
     await waitFor(() => {
-      expect(buyer.issueToken).toHaveBeenCalledWith({
-        buyerIdentity: "buyer@example.com",
+      expect(customer.issueToken).toHaveBeenCalledWith({
+        buyerIdentity: "customer@example.com",
         storeId: undefined,
         productId: "PROD_abc",
       });
     });
   });
 
-  it("should set isBuyerReady to true after successful token issuance", async () => {
-    const buyer = createMockBuyerConfig();
+  it("should set isCustomerReady to true after successful token issuance", async () => {
+    const customer = createMockCustomerConfig();
 
     const { result } = renderHook(() => usePancakeContext(), {
-      wrapper: ({ children }: { children: React.ReactNode }) => <WaffoPancakeProvider buyer={buyer}>{children}</WaffoPancakeProvider>,
+      wrapper: ({ children }: { children: React.ReactNode }) => <WaffoPancakeProvider customer={customer}>{children}</WaffoPancakeProvider>,
     });
 
     await waitFor(() => {
-      expect(result.current.isBuyerReady).toBe(true);
+      expect(result.current.isCustomerReady).toBe(true);
     });
   });
 
-  it("should set isBuyerReady to true even when token issuance fails", async () => {
-    const buyer = createMockBuyerConfig({
+  it("should set isCustomerReady to true even when token issuance fails", async () => {
+    const customer = createMockCustomerConfig({
       issueToken: vi.fn().mockRejectedValue(new Error("Network error")),
     });
 
     const { result } = renderHook(() => usePancakeContext(), {
-      wrapper: ({ children }: { children: React.ReactNode }) => <WaffoPancakeProvider buyer={buyer}>{children}</WaffoPancakeProvider>,
+      wrapper: ({ children }: { children: React.ReactNode }) => <WaffoPancakeProvider customer={customer}>{children}</WaffoPancakeProvider>,
     });
 
     await waitFor(() => {
-      expect(result.current.isBuyerReady).toBe(true);
+      expect(result.current.isCustomerReady).toBe(true);
     });
   });
 
-  it("should expose hasBuyer as true", async () => {
-    const buyer = createMockBuyerConfig();
+  it("should expose hasCustomer as true", async () => {
+    const customer = createMockCustomerConfig();
 
     const { result } = renderHook(() => usePancakeContext(), {
-      wrapper: ({ children }: { children: React.ReactNode }) => <WaffoPancakeProvider buyer={buyer}>{children}</WaffoPancakeProvider>,
+      wrapper: ({ children }: { children: React.ReactNode }) => <WaffoPancakeProvider customer={customer}>{children}</WaffoPancakeProvider>,
     });
 
-    expect(result.current.hasBuyer).toBe(true);
+    expect(result.current.hasCustomer).toBe(true);
   });
 
-  it("should expose buyerSessionAction from config", async () => {
-    const buyer = createMockBuyerConfig();
+  it("should expose customerSessionAction from config", async () => {
+    const customer = createMockCustomerConfig();
 
     const { result } = renderHook(() => usePancakeContext(), {
-      wrapper: ({ children }: { children: React.ReactNode }) => <WaffoPancakeProvider buyer={buyer}>{children}</WaffoPancakeProvider>,
+      wrapper: ({ children }: { children: React.ReactNode }) => <WaffoPancakeProvider customer={customer}>{children}</WaffoPancakeProvider>,
     });
 
-    expect(result.current.buyerSessionAction).toBe(buyer.sessionAction);
+    expect(result.current.customerSessionAction).toBe(customer.sessionAction);
   });
 
-  describe("getBuyerToken", () => {
+  describe("getCustomerToken", () => {
     it("should return cached token when not expired", async () => {
-      const buyer = createMockBuyerConfig();
+      const customer = createMockCustomerConfig();
 
       const { result } = renderHook(() => usePancakeContext(), {
-        wrapper: ({ children }: { children: React.ReactNode }) => <WaffoPancakeProvider buyer={buyer}>{children}</WaffoPancakeProvider>,
+        wrapper: ({ children }: { children: React.ReactNode }) => (
+          <WaffoPancakeProvider customer={customer}>{children}</WaffoPancakeProvider>
+        ),
       });
 
       // Wait for initial token to be issued
       await waitFor(() => {
-        expect(result.current.isBuyerReady).toBe(true);
+        expect(result.current.isCustomerReady).toBe(true);
       });
 
-      // getBuyerToken should return cached token without calling issueToken again
+      // getCustomerToken should return cached token without calling issueToken again
       let token: string | undefined;
       await act(async () => {
-        token = await result.current.getBuyerToken();
+        token = await result.current.getCustomerToken();
       });
 
       expect(token).toBe("tok_initial");
       // issueToken called once on mount, not again
-      expect(buyer.issueToken).toHaveBeenCalledTimes(1);
+      expect(customer.issueToken).toHaveBeenCalledTimes(1);
     });
 
     it("should refresh token when expired (past buffer)", async () => {
       // First call returns a token that is about to expire (within 30s buffer)
       const issueToken = vi
-        .fn<BuyerTokenAction>()
+        .fn<CustomerTokenAction>()
         .mockResolvedValueOnce({
           token: "tok_expired",
           expiresAt: new Date(Date.now() + 10_000).toISOString(), // expires in 10s, within 30s buffer
@@ -157,20 +159,22 @@ describe("WaffoPancakeProvider", () => {
           expiresAt: new Date(Date.now() + 120_000).toISOString(),
         });
 
-      const buyer = createMockBuyerConfig({ issueToken });
+      const customer = createMockCustomerConfig({ issueToken });
 
       const { result } = renderHook(() => usePancakeContext(), {
-        wrapper: ({ children }: { children: React.ReactNode }) => <WaffoPancakeProvider buyer={buyer}>{children}</WaffoPancakeProvider>,
+        wrapper: ({ children }: { children: React.ReactNode }) => (
+          <WaffoPancakeProvider customer={customer}>{children}</WaffoPancakeProvider>
+        ),
       });
 
       await waitFor(() => {
-        expect(result.current.isBuyerReady).toBe(true);
+        expect(result.current.isCustomerReady).toBe(true);
       });
 
       // Token is within buffer, should trigger refresh
       let token: string | undefined;
       await act(async () => {
-        token = await result.current.getBuyerToken();
+        token = await result.current.getCustomerToken();
       });
 
       expect(token).toBe("tok_refreshed");
@@ -181,7 +185,7 @@ describe("WaffoPancakeProvider", () => {
       let resolveSecond: ((value: { token: string; expiresAt: string }) => void) | undefined;
 
       const issueToken = vi
-        .fn<BuyerTokenAction>()
+        .fn<CustomerTokenAction>()
         .mockResolvedValueOnce({
           token: "tok_expired",
           expiresAt: new Date(Date.now() - 60_000).toISOString(), // already expired
@@ -193,14 +197,16 @@ describe("WaffoPancakeProvider", () => {
             }),
         );
 
-      const buyer = createMockBuyerConfig({ issueToken });
+      const customer = createMockCustomerConfig({ issueToken });
 
       const { result } = renderHook(() => usePancakeContext(), {
-        wrapper: ({ children }: { children: React.ReactNode }) => <WaffoPancakeProvider buyer={buyer}>{children}</WaffoPancakeProvider>,
+        wrapper: ({ children }: { children: React.ReactNode }) => (
+          <WaffoPancakeProvider customer={customer}>{children}</WaffoPancakeProvider>
+        ),
       });
 
       await waitFor(() => {
-        expect(result.current.isBuyerReady).toBe(true);
+        expect(result.current.isCustomerReady).toBe(true);
       });
 
       // Fire two concurrent calls — both should share the same refresh promise
@@ -208,8 +214,8 @@ describe("WaffoPancakeProvider", () => {
       let token2: string | undefined;
 
       await act(async () => {
-        const p1 = result.current.getBuyerToken();
-        const p2 = result.current.getBuyerToken();
+        const p1 = result.current.getCustomerToken();
+        const p2 = result.current.getCustomerToken();
 
         resolveSecond!({
           token: "tok_deduped",
@@ -240,10 +246,10 @@ describe("usePancakeContext", () => {
 
   it("should return context when used inside provider", () => {
     const mockValue = {
-      getBuyerToken: vi.fn().mockResolvedValue("tok_abc"),
-      buyerSessionAction: vi.fn(),
-      hasBuyer: true,
-      isBuyerReady: true,
+      getCustomerToken: vi.fn().mockResolvedValue("tok_abc"),
+      customerSessionAction: vi.fn(),
+      hasCustomer: true,
+      isCustomerReady: true,
     };
 
     const { result } = renderHook(() => usePancakeContext(), {
@@ -252,8 +258,8 @@ describe("usePancakeContext", () => {
       ),
     });
 
-    expect(result.current.hasBuyer).toBe(true);
-    expect(result.current.isBuyerReady).toBe(true);
-    expect(result.current.getBuyerToken).toBe(mockValue.getBuyerToken);
+    expect(result.current.hasCustomer).toBe(true);
+    expect(result.current.isCustomerReady).toBe(true);
+    expect(result.current.getCustomerToken).toBe(mockValue.getCustomerToken);
   });
 });

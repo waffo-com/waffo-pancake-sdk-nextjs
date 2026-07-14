@@ -4,6 +4,21 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-07-14
+
+### Changed
+
+- **Public API renamed from "buyer" to "customer"** — the merchant's end consumer is called a customer across the SDK (matching the session-token JWT role). New primary names:
+  - Hooks: `useBuyer` → `useCustomer` · `useBuyerOrders` → `useCustomerOrders` · `useBuyerPayments` → `useCustomerPayments` · `useBuyerRefundTickets` → `useCustomerRefundTickets`
+  - Server action factories (`@waffo/pancake-nextjs/server`): `createBuyerTokenAction` → `createCustomerTokenAction` · `createBuyerSessionAction` → `createCustomerSessionAction`
+  - Types: `BuyerConfig` → `CustomerConfig` · `BuyerActionState` → `CustomerActionState` · `UseBuyerReturn` → `UseCustomerReturn` · `BuyerOnetimeOrder` → `CustomerOnetimeOrder` · `BuyerSubscriptionOrder` → `CustomerSubscriptionOrder` · `BuyerPayment` → `CustomerPayment` · `BuyerRefundTicket` → `CustomerRefundTicket` · `BuyerTokenAction` → `CustomerTokenAction` · `BuyerSessionAction` → `CustomerSessionAction` · `BuyerSessionActionType` → `CustomerSessionActionType`
+  - `<WaffoPancakeProvider>`: the config prop is now `customer` (the `buyer` prop is still accepted; `customer` wins when both are set)
+- **Wire contract unchanged** — request/payload field names stay as-is: `buyerIdentity` (checkout params, `issueSessionToken` params), `buyerEmail` (webhook event data, GraphQL fields), HTTP paths, and header names. No server-side changes required.
+
+### Deprecated
+
+- All previous "buyer" names remain exported as working aliases of the new "customer" names (marked `@deprecated`) and will be removed in the next release: `useBuyer`, `useBuyerOrders`, `useBuyerPayments`, `useBuyerRefundTickets`, `createBuyerTokenAction`, `createBuyerSessionAction`, the `Buyer*` types listed above, and the `buyer` prop on `<WaffoPancakeProvider>`.
+
 ## [0.1.9] - 2026-06-05
 
 ### Changed

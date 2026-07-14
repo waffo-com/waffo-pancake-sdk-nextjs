@@ -1,8 +1,15 @@
 export { WaffoPancakeProvider } from "./provider.js";
 export { CheckoutButton } from "./checkout-button.js";
 export { useCheckout } from "./use-checkout.js";
-export { useBuyer } from "./use-buyer.js";
-export { useBuyerOrders, useBuyerPayments, useBuyerRefundTickets } from "./use-buyer-data.js";
+export { useCustomer, useBuyer } from "./use-customer.js";
+export {
+  useCustomerOrders,
+  useCustomerPayments,
+  useCustomerRefundTickets,
+  useBuyerOrders,
+  useBuyerPayments,
+  useBuyerRefundTickets,
+} from "./use-customer-data.js";
 export { useMerchantOrders, useMerchantSales, useMerchantSubscriptions } from "./use-merchant-data.js";
 export { Webhook } from "./webhook.js";
 
@@ -22,7 +29,7 @@ export type {
   UseCheckoutReturn,
 } from "./types.js";
 
-export type { BuyerConfig, WaffoPancakeProviderProps } from "./provider.js";
+export type { CustomerConfig, BuyerConfig, WaffoPancakeProviderProps } from "./provider.js";
 
 export type {
   CheckoutButtonProps,
@@ -31,11 +38,20 @@ export type {
   AuthenticatedCheckoutButtonProps,
 } from "./checkout-button.js";
 
-export type { BuyerActionState, UseBuyerReturn } from "./use-buyer.js";
+export type { CustomerActionState, UseCustomerReturn, BuyerActionState, UseBuyerReturn } from "./use-customer.js";
 
 export type { QueryState } from "./use-query.js";
 
-export type { BuyerOnetimeOrder, BuyerSubscriptionOrder, BuyerPayment, BuyerRefundTicket } from "./use-buyer-data.js";
+export type {
+  CustomerOnetimeOrder,
+  CustomerSubscriptionOrder,
+  CustomerPayment,
+  CustomerRefundTicket,
+  BuyerOnetimeOrder,
+  BuyerSubscriptionOrder,
+  BuyerPayment,
+  BuyerRefundTicket,
+} from "./use-customer-data.js";
 
 export type {
   MerchantOrder,
@@ -52,6 +68,8 @@ export type {
   CheckoutAction,
   CheckoutActionParams,
   CheckoutActionResult,
+  CustomerTokenAction,
+  CustomerSessionAction,
   BuyerTokenAction,
   BuyerSessionAction,
   MerchantQueryAction,

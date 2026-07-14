@@ -55,7 +55,7 @@ describe("useCheckout", () => {
           storeSlug: "my-store",
           productId: "PROD_xxx",
           currency: "JPY",
-          email: "buyer@example.com",
+          email: "customer@example.com",
           successUrl: "https://example.com/success",
           test: true,
           country: "JP",
@@ -70,7 +70,7 @@ describe("useCheckout", () => {
       const url = new URL(window.location.href);
       expect(url.pathname).toBe("/store/my-store/product/PROD_xxx");
       expect(url.searchParams.get("currency")).toBe("JPY");
-      expect(url.searchParams.get("email")).toBe("buyer@example.com");
+      expect(url.searchParams.get("email")).toBe("customer@example.com");
       expect(url.searchParams.get("success_url")).toBe("https://example.com/success");
       expect(url.searchParams.get("test")).toBe("true");
       expect(url.searchParams.get("country")).toBe("JP");

@@ -19,9 +19,9 @@ export interface WebhookConfig {
   onSubscriptionActivated?: EventHandler;
   /** Subscription renewal payment succeeded */
   onSubscriptionPaymentSucceeded?: EventHandler;
-  /** Buyer initiated cancellation (expires at end of current period) */
+  /** Customer initiated cancellation (expires at end of current period) */
   onSubscriptionCanceling?: EventHandler;
-  /** Buyer withdrew cancellation (subscription restored) */
+  /** Customer withdrew cancellation (subscription restored) */
   onSubscriptionUncanceled?: EventHandler;
   /** Subscription product changed (upgrade/downgrade) */
   onSubscriptionUpdated?: EventHandler;
