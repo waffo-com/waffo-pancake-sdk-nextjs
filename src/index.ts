@@ -16,7 +16,15 @@ export { Webhook } from "./webhook.js";
 // Re-export types commonly used in client components
 export { WaffoPancakeError, TaxCategory, WebhookEventType } from "@waffo/pancake-ts";
 
-export type { PriceInfo, BillingDetail, RequestedAmount, RefundTicketVersionData, WebhookEvent, WebhookEventData } from "@waffo/pancake-ts";
+export type {
+  PriceInfo,
+  BillingDetail,
+  RequestedAmount,
+  RefundTicketVersionData,
+  WebhookEvent,
+  WebhookEventData,
+  CashierLanguage,
+} from "@waffo/pancake-ts";
 
 // Local types
 export type {

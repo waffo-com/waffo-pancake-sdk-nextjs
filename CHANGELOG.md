@@ -4,6 +4,15 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-07-17
+
+Adds cashier language selection to checkout.
+
+### Added
+
+- **`CashierLanguage`** — re-exported from `@waffo/pancake-ts`; the union of supported checkout cashier languages (IETF BCP 47, e.g. `"en"`, `"pt-BR"`).
+- **`language` on checkout** — anonymous/authenticated checkout props and `<CheckoutButton>` now accept an optional `language` (typed `CashierLanguage`), forwarded to the checkout session as the hosted page's default language. Inherited from `@waffo/pancake-ts` checkout params; requires `@waffo/pancake-ts` >= 0.13.0.
+
 ## [0.2.0] - 2026-07-14
 
 ### Changed
