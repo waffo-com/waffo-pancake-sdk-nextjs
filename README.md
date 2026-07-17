@@ -116,6 +116,11 @@ import { checkout } from "./lib/waffo";
 <CheckoutButton action={checkout} productId="PROD_xxx" currency="USD" withTrial={true} billingDetail={{ country: "JP", isBusiness: false }}>
   Start Free Trial
 </CheckoutButton>
+
+// Set the default checkout language (IETF BCP 47) — the customer can still switch on the page
+<CheckoutButton action={checkout} productId="PROD_xxx" currency="USD" language="pt-BR">
+  Comprar agora
+</CheckoutButton>
 ```
 
 Pass an optional `orderMerchantExternalId` to attach your internal order reference — see [Business-Side Identifiers](#business-side-identifiers).
@@ -409,7 +414,7 @@ Import from `@waffo/pancake-nextjs/server`. Config requires `merchantId` and `pr
 
 ### Types
 
-Key types: `PriceInfo`, `BillingDetail`, `WebhookEvent`, `CheckoutAction`, `CustomerTokenAction`, `CustomerSessionAction`, `MerchantQueryAction`, `CustomerConfig`, `CheckoutButtonProps`, `CheckoutMode`, `UseCheckoutReturn`, `UseCustomerReturn`, `CustomerActionState<T>`, `QueryState<T>`, `SalesOverview`, `SubscriptionOverview`, `WebhookConfig`.
+Key types: `PriceInfo`, `BillingDetail`, `WebhookEvent`, `CheckoutAction`, `CustomerTokenAction`, `CustomerSessionAction`, `MerchantQueryAction`, `CustomerConfig`, `CheckoutButtonProps`, `CheckoutMode`, `CashierLanguage`, `UseCheckoutReturn`, `UseCustomerReturn`, `CustomerActionState<T>`, `QueryState<T>`, `SalesOverview`, `SubscriptionOverview`, `WebhookConfig`.
 
 ## Development
 
