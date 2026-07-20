@@ -132,6 +132,38 @@ describe("useCheckout", () => {
 
       expect(action).toHaveBeenCalledWith(expect.objectContaining({ orderMerchantExternalId: "ORDER-2026-00891" }));
     });
+
+    it("should forward paymentMethods to the server action", async () => {
+      const action = createMockAction();
+      const { result } = renderHook(() =>
+        useCheckout({
+          action,
+          productId: "PROD_xxx",
+          currency: "USD",
+          paymentMethods: ["APPLEPAY", "CREDITCARD"],
+        }),
+      );
+
+      await act(async () => {
+        result.current.checkout();
+        await new Promise((r) => setTimeout(r, 10));
+      });
+
+      expect(action).toHaveBeenCalledWith(expect.objectContaining({ paymentMethods: ["APPLEPAY", "CREDITCARD"] }));
+    });
+
+    it("should not forward a paymentMethods key when omitted (backward compatibility)", async () => {
+      const action = createMockAction();
+      const { result } = renderHook(() => useCheckout({ action, productId: "PROD_xxx", currency: "USD" }));
+
+      await act(async () => {
+        result.current.checkout();
+        await new Promise((r) => setTimeout(r, 10));
+      });
+
+      const calledWith = action.mock.calls[0][0];
+      expect("paymentMethods" in calledWith).toBe(false);
+    });
   });
 
   describe("authenticated checkout", () => {
