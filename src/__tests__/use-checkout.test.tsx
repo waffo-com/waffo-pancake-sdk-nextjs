@@ -132,6 +132,38 @@ describe("useCheckout", () => {
 
       expect(action).toHaveBeenCalledWith(expect.objectContaining({ orderMerchantExternalId: "ORDER-2026-00891" }));
     });
+
+    it("should forward paymentMethods to the server action, preserving order", async () => {
+      const action = createMockAction();
+      const { result } = renderHook(() =>
+        useCheckout({
+          action,
+          productId: "PROD_xxx",
+          currency: "USD",
+          paymentMethods: ["EWALLET", "CREDITCARD"],
+        }),
+      );
+
+      await act(async () => {
+        result.current.checkout();
+        await new Promise((r) => setTimeout(r, 10));
+      });
+
+      expect(action).toHaveBeenCalledWith(expect.objectContaining({ paymentMethods: ["EWALLET", "CREDITCARD"] }));
+    });
+
+    it("should not include paymentMethods in the server action call when not provided", async () => {
+      const action = createMockAction();
+      const { result } = renderHook(() => useCheckout({ action, productId: "PROD_xxx", currency: "USD" }));
+
+      await act(async () => {
+        result.current.checkout();
+        await new Promise((r) => setTimeout(r, 10));
+      });
+
+      const callArgs = (action as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(callArgs.paymentMethods).toBeUndefined();
+    });
   });
 
   describe("authenticated checkout", () => {
@@ -163,6 +195,36 @@ describe("useCheckout", () => {
 
       expect(action).toHaveBeenCalledWith(expect.objectContaining({ type: "authenticated", productId: "PROD_xxx" }));
       expect(window.location.href).toBe("https://checkout.example.com/cs_456#token=tok_abc");
+    });
+
+    it("should forward paymentMethods to the server action, preserving order", async () => {
+      const action = createMockAction({
+        result: {
+          sessionId: "cs_456",
+          checkoutUrl: "https://checkout.example.com/cs_456#token=tok_abc",
+          expiresAt: "2026-04-10T12:00:00Z",
+          token: "tok_abc",
+          tokenExpiresAt: "2026-04-10T12:30:00Z",
+        },
+      });
+
+      const { result } = renderHook(() =>
+        useCheckout({
+          type: "authenticated",
+          action,
+          productId: "PROD_xxx",
+          currency: "USD",
+          buyerIdentity: "user@example.com",
+          paymentMethods: ["APPLEPAY", "GOOGLEPAY", "CREDITCARD"],
+        }),
+      );
+
+      await act(async () => {
+        result.current.checkout();
+        await new Promise((r) => setTimeout(r, 10));
+      });
+
+      expect(action).toHaveBeenCalledWith(expect.objectContaining({ paymentMethods: ["APPLEPAY", "GOOGLEPAY", "CREDITCARD"] }));
     });
   });
 

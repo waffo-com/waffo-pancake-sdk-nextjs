@@ -121,9 +121,16 @@ import { checkout } from "./lib/waffo";
 <CheckoutButton action={checkout} productId="PROD_xxx" currency="USD" language="pt-BR">
   Comprar agora
 </CheckoutButton>
+
+// Restrict and order the hosted cashier's payment methods — cards only
+<CheckoutButton action={checkout} productId="PROD_xxx" currency="USD" paymentMethods={["CREDITCARD", "DEBITCARD"]}>
+  Buy Now
+</CheckoutButton>
 ```
 
 Pass an optional `orderMerchantExternalId` to attach your internal order reference — see [Business-Side Identifiers](#business-side-identifiers).
+
+Pass an optional ordered, non-empty `paymentMethods` allow-list (`"CREDITCARD" | "DEBITCARD" | "APPLEPAY" | "GOOGLEPAY" | "EWALLET"`) to restrict and order which methods the hosted cashier shows. Omit to keep current default behavior. Unavailable, unknown, duplicate, or empty values are rejected server-side with a 4xx error — no session is created and no fallback is applied.
 
 ### Authenticated Checkout (Recommended)
 

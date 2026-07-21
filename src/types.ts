@@ -1,4 +1,4 @@
-import type { CheckoutAction } from "./server.js";
+import type { CheckoutAction, PaymentMethod } from "./server.js";
 import type {
   AnonymousCheckoutParams,
   AuthenticatedCheckoutParams,
@@ -54,6 +54,13 @@ export type AnonymousCheckoutProps = CheckoutBaseOptions & {
   action: CheckoutAction;
   /** Callback fired when checkout session is successfully created */
   onSuccess?: (result: CheckoutSessionResult) => void;
+  /**
+   * Optional ordered, non-empty allow-list of payment methods to show on the
+   * hosted cashier, in this order. Omit to keep current default behavior.
+   * Unavailable, unknown, duplicate, or empty values are rejected server-side
+   * with a 4xx error and no session is created.
+   */
+  paymentMethods?: PaymentMethod[];
 } & AnonymousCheckoutParams;
 
 /** Authenticated checkout — creates session + token via server action */
@@ -63,6 +70,13 @@ export type AuthenticatedCheckoutProps = CheckoutBaseOptions & {
   action: CheckoutAction;
   /** Callback fired when checkout session is successfully created */
   onSuccess?: (result: AuthenticatedCheckoutResult) => void;
+  /**
+   * Optional ordered, non-empty allow-list of payment methods to show on the
+   * hosted cashier, in this order. Omit to keep current default behavior.
+   * Unavailable, unknown, duplicate, or empty values are rejected server-side
+   * with a 4xx error and no session is created.
+   */
+  paymentMethods?: PaymentMethod[];
 } & AuthenticatedCheckoutParams;
 
 /** Union of all checkout prop types */

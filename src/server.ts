@@ -38,10 +38,19 @@ import type {
 // Checkout Action
 // ============================================================
 
+/**
+ * Supported hosted-cashier payment method identifiers.
+ *
+ * Defined locally (rather than imported from `@waffo/pancake-ts`) to avoid a hard
+ * dependency on a specific upstream SDK release; kept in sync with the same
+ * identifier set exposed by `@waffo/pancake-ts`'s own `PaymentMethod` type.
+ */
+export type PaymentMethod = "CREDITCARD" | "DEBITCARD" | "APPLEPAY" | "GOOGLEPAY" | "EWALLET";
+
 /** Parameters for the checkout server action */
 export type CheckoutActionParams =
-  | ({ type?: "anonymous" } & AnonymousCheckoutParams)
-  | ({ type: "authenticated" } & AuthenticatedCheckoutParams);
+  | ({ type?: "anonymous" } & AnonymousCheckoutParams & { paymentMethods?: PaymentMethod[] })
+  | ({ type: "authenticated" } & AuthenticatedCheckoutParams & { paymentMethods?: PaymentMethod[] });
 
 /** Result of the checkout server action */
 export type CheckoutActionResult = CheckoutSessionResult | AuthenticatedCheckoutResult;
