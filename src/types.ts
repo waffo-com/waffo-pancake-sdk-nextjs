@@ -42,6 +42,12 @@ export interface LinkCheckoutProps extends CheckoutBaseOptions {
   /** Is business purchase */
   isBusiness?: boolean;
   /**
+   * Optional ordered allowlist of payment methods to show on the hosted checkout page
+   * (e.g. `["APPLEPAY", "CREDITCARD"]`). Encoded as a comma-separated `payment_methods`
+   * query param, preserving order. Omit to preserve the current default behavior.
+   */
+  paymentMethods?: string[];
+  /**
    * Base URL of the storefront. Default: `"https://pancake.waffo.ai"`
    */
   baseUrl?: string;

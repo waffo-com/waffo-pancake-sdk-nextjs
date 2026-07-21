@@ -77,6 +77,43 @@ describe("useCheckout", () => {
       expect(url.searchParams.get("is_business")).toBe("true");
     });
 
+    it("should encode paymentMethods as an ordered comma-separated query param", () => {
+      const { result } = renderHook(() =>
+        useCheckout({
+          type: "link",
+          storeSlug: "my-store",
+          productId: "PROD_xxx",
+          currency: "USD",
+          paymentMethods: ["APPLEPAY", "CREDITCARD"],
+        }),
+      );
+
+      act(() => {
+        result.current.checkout();
+      });
+
+      const url = new URL(window.location.href);
+      expect(url.searchParams.get("payment_methods")).toBe("APPLEPAY,CREDITCARD");
+    });
+
+    it("should omit payment_methods from the URL when not provided", () => {
+      const { result } = renderHook(() =>
+        useCheckout({
+          type: "link",
+          storeSlug: "my-store",
+          productId: "PROD_xxx",
+          currency: "USD",
+        }),
+      );
+
+      act(() => {
+        result.current.checkout();
+      });
+
+      const url = new URL(window.location.href);
+      expect(url.searchParams.has("payment_methods")).toBe(false);
+    });
+
     it("should open popup in popup mode", () => {
       vi.spyOn(window, "open").mockReturnValue(null);
 
@@ -131,6 +168,38 @@ describe("useCheckout", () => {
       });
 
       expect(action).toHaveBeenCalledWith(expect.objectContaining({ orderMerchantExternalId: "ORDER-2026-00891" }));
+    });
+
+    it("should forward paymentMethods to the server action", async () => {
+      const action = createMockAction();
+      const { result } = renderHook(() =>
+        useCheckout({
+          action,
+          productId: "PROD_xxx",
+          currency: "USD",
+          paymentMethods: ["APPLEPAY", "CREDITCARD"],
+        }),
+      );
+
+      await act(async () => {
+        result.current.checkout();
+        await new Promise((r) => setTimeout(r, 10));
+      });
+
+      expect(action).toHaveBeenCalledWith(expect.objectContaining({ paymentMethods: ["APPLEPAY", "CREDITCARD"] }));
+    });
+
+    it("should not forward paymentMethods to the server action when omitted", async () => {
+      const action = createMockAction();
+      const { result } = renderHook(() => useCheckout({ action, productId: "PROD_xxx", currency: "USD" }));
+
+      await act(async () => {
+        result.current.checkout();
+        await new Promise((r) => setTimeout(r, 10));
+      });
+
+      const calledWith = vi.mocked(action).mock.calls[0][0];
+      expect(calledWith).not.toHaveProperty("paymentMethods");
     });
   });
 

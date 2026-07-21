@@ -5,7 +5,6 @@ import { useCallback, useRef, useState } from "react";
 import type { CheckoutProps, LinkCheckoutProps, UseCheckoutReturn } from "./types.js";
 import type { CheckoutSessionResult, AuthenticatedCheckoutResult } from "@waffo/pancake-ts";
 
-
 const LOADING_HTML = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Loading...</title><style>body{display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:system-ui,sans-serif;background:#f9fafb;color:#6b7280}@media(prefers-color-scheme:dark){body{background:#111827;color:#9ca3af}}</style></head><body><p>Redirecting to checkout...</p></body></html>`;
 
 const DEFAULT_STOREFRONT_URL = "https://pancake.waffo.ai";
@@ -34,6 +33,7 @@ function buildLinkUrl(props: LinkCheckoutProps): string {
   if (props.test) url.searchParams.set("test", "true");
   if (props.country) url.searchParams.set("country", props.country);
   if (props.isBusiness) url.searchParams.set("is_business", "true");
+  if (props.paymentMethods?.length) url.searchParams.set("payment_methods", props.paymentMethods.join(","));
 
   return url.toString();
 }
