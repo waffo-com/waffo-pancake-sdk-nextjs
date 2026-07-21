@@ -45,6 +45,15 @@ export interface LinkCheckoutProps extends CheckoutBaseOptions {
    * Optional ordered allowlist of payment methods to show on the hosted checkout page
    * (e.g. `["APPLEPAY", "CREDITCARD"]`). Encoded as a comma-separated `payment_methods`
    * query param, preserving order. Omit to preserve the current default behavior.
+   *
+   * Unlike `AnonymousCheckoutProps`/`AuthenticatedCheckoutProps` (always merchant/API-key
+   * authenticated), link mode never calls the checkout API itself — it navigates the buyer
+   * to a storefront product page outside this SDK. Whether that page's own backend creates
+   * the session with merchant (API key) or visitor (store-slug) authentication determines
+   * whether this restriction is actually enforced: if it authenticates as a visitor,
+   * order-service silently ignores this field (visitor-created sessions never carry a
+   * merchant-supplied payment method restriction). Confirm with whatever serves that
+   * storefront page before relying on this in link mode.
    */
   paymentMethods?: string[];
   /**
