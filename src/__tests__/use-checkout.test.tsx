@@ -132,6 +132,25 @@ describe("useCheckout", () => {
 
       expect(action).toHaveBeenCalledWith(expect.objectContaining({ orderMerchantExternalId: "ORDER-2026-00891" }));
     });
+
+    it("should forward paymentMethods to the server action", async () => {
+      const action = createMockAction();
+      const { result } = renderHook(() =>
+        useCheckout({
+          action,
+          productId: "PROD_xxx",
+          currency: "USD",
+          paymentMethods: ["card", "applepay"],
+        }),
+      );
+
+      await act(async () => {
+        result.current.checkout();
+        await new Promise((r) => setTimeout(r, 10));
+      });
+
+      expect(action).toHaveBeenCalledWith(expect.objectContaining({ paymentMethods: ["card", "applepay"] }));
+    });
   });
 
   describe("authenticated checkout", () => {
