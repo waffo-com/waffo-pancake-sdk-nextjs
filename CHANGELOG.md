@@ -4,6 +4,15 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-07-22
+
+Adds an ordered payment-method allow-list to checkout, inherited automatically from `@waffo/pancake-ts`.
+
+### Added
+
+- **`paymentMethods` on checkout** — anonymous/authenticated checkout props now accept an optional ordered `paymentMethods` array, forwarded to the checkout session. The hosted cashier only shows these methods, in this order. No source change was needed in this package: `AnonymousCheckoutProps`/`AuthenticatedCheckoutProps` inherit the field via their existing type intersection with `@waffo/pancake-ts`'s `CreateCheckoutSessionParams`.
+- **Note**: this field is only present in the installed types once `@waffo/pancake-ts >= 0.15.0` is published — this package's `dependencies` range (`^0.13.0`) is intentionally **not** bumped yet to avoid pinning to an unpublished version; a follow-up commit will bump it once `@waffo/pancake-ts@0.15.0` is actually published (see that package's CHANGELOG).
+
 ## [0.3.0] - 2026-07-17
 
 Adds cashier language selection to checkout.
