@@ -4,6 +4,21 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-07-28
+
+Adds per-transaction payment method selection to checkout.
+
+### Added
+
+- **`PaymentMethod`** — re-exported from `@waffo/pancake-ts`; the union of payment methods offered on the checkout page (`"card"` / `"applepay"` / `"googlepay"` / `"wechat"`).
+- **`includePaymentMethods` / `excludePaymentMethods` on checkout** — anonymous/authenticated checkout props and `<CheckoutButton>` now accept an optional whitelist or blacklist (typed `PaymentMethod[]`), forwarded to the checkout session to select the methods offered. The two are mutually exclusive. Inherited from `@waffo/pancake-ts` checkout params; requires `@waffo/pancake-ts` >= 0.16.0.
+
+### Changed
+
+- `@waffo/pancake-ts` dependency range raised to `^0.16.0`.
+
+---
+
 ## [0.3.0] - 2026-07-17
 
 Adds cashier language selection to checkout.

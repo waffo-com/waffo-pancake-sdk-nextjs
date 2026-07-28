@@ -121,6 +121,11 @@ import { checkout } from "./lib/waffo";
 <CheckoutButton action={checkout} productId="PROD_xxx" currency="USD" language="pt-BR">
   Comprar agora
 </CheckoutButton>
+
+// Select the payment methods offered on the checkout page (whitelist or blacklist, not both)
+<CheckoutButton action={checkout} productId="PROD_xxx" currency="USD" includePaymentMethods={["card", "applepay"]}>
+  Buy Now
+</CheckoutButton>
 ```
 
 Pass an optional `orderMerchantExternalId` to attach your internal order reference — see [Business-Side Identifiers](#business-side-identifiers).
