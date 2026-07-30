@@ -180,6 +180,12 @@ import { checkout } from "./lib/waffo";
 For programmatic control — same props as `CheckoutButton`, returns `{ checkout, isLoading, error }`:
 
 ```tsx
+
+
+> Passing `billingDetail` couples the cashier to the order's billing country: it then offers only that country's
+> payment market and the customer cannot switch. The country that applies is the one on the finished order, not the
+> one you sent; a country outside the payment markets we cover applies no restriction. Omit it to leave the cashier
+> unrestricted.
 import { useCheckout } from "@waffo/pancake-nextjs";
 import { checkout as checkoutAction } from "./lib/waffo";
 
