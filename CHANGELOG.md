@@ -4,6 +4,22 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-08-08
+
+Picks up the `@waffo/pancake-ts` fix that makes customer sessions reach the API at all.
+
+### Fixed
+
+- **`createCustomerSessionAction` reached the gateway but never the API.** Every action it dispatched — `cancelSubscription`, `cancelOnetimeOrder`, `reactivateSubscription`, `createRefundTicket`, `resubmitRefundTicket`, `query` — was rejected with HTTP 400 `Incomplete JWT authentication headers`, because the underlying session client omitted `X-Environment`. Fixed in `@waffo/pancake-ts` 0.18.0; no code change here beyond the dependency.
+- **`createWebhookHandler` no longer rejects legitimate delivery retries.** The signature timestamp is stamped before the first attempt and retries reuse it, so late retries arrived outside the old 5-minute replay window. The default is now 45 minutes past / 1 minute future, inherited from `@waffo/pancake-ts` 0.18.0. `verifyOptions` passes through unchanged, including the new `futureToleranceMs`.
+
+### Changed
+
+- **`createCustomerSessionAction(config)` requires `config.environment`** (`"test"` or `"prod"`), forwarded to the customer session. Without it the action throws `WaffoPancakeError` (400, `layer: "sdk"`) on the first call. `createCustomerTokenAction` is unaffected — token issuance authenticates with the API Key, whose environment the gateway derives from the key itself.
+- `@waffo/pancake-ts` dependency range raised to `^0.18.0`.
+
+---
+
 ## [0.4.0] - 2026-07-28
 
 Adds per-transaction payment method selection to checkout.
