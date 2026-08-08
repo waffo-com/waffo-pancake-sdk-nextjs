@@ -134,6 +134,9 @@ export type CustomerSessionAction = (token: string, actionType: CustomerSessionA
 /**
  * Create a server action that executes customer self-service operations.
  *
+ * `config.environment` is required — session tokens carry no environment, and the
+ * gateway rejects a session request without the matching header.
+ *
  * @param config - WaffoPancake client configuration
  * @returns A server action function
  *
@@ -145,6 +148,7 @@ export type CustomerSessionAction = (token: string, actionType: CustomerSessionA
  * export const customerAction = createCustomerSessionAction({
  *   merchantId: process.env.WAFFO_MERCHANT_ID!,
  *   privateKey: process.env.WAFFO_PRIVATE_KEY!,
+ *   environment: "test",
  * });
  * ```
  */

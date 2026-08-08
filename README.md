@@ -45,6 +45,8 @@ import {
 const config = {
   merchantId: process.env.WAFFO_MERCHANT_ID!,
   privateKey: process.env.WAFFO_PRIVATE_KEY!,
+  // Required by createCustomerSessionAction — session tokens carry no environment
+  environment: "test" as const,
 };
 
 export const checkout = createCheckoutAction(config);
