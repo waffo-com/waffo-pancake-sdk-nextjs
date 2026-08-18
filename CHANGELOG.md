@@ -4,6 +4,20 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-08-18
+
+Picks up the trial period price types from `@waffo/pancake-ts` 0.19.0.
+
+### Added
+
+- **`PriceSnapshot`** re-exported from `@waffo/pancake-ts` — the type the `priceSnapshot` prop accepts on `CheckoutButton` and on the params of `createCheckoutAction`. `PriceInfo` continues to carry `trialAmount` for product-level pricing.
+
+### Changed
+
+- `@waffo/pancake-ts` dependency range raised to `^0.19.0`.
+
+---
+
 ## [0.5.0] - 2026-08-08
 
 Picks up the `@waffo/pancake-ts` fix that makes customer sessions reach the API at all.

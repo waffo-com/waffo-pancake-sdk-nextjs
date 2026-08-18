@@ -427,7 +427,7 @@ Import from `@waffo/pancake-nextjs/server`. Config requires `merchantId` and `pr
 
 ### Types
 
-Key types: `PriceInfo`, `BillingDetail`, `WebhookEvent`, `CheckoutAction`, `CustomerTokenAction`, `CustomerSessionAction`, `MerchantQueryAction`, `CustomerConfig`, `CheckoutButtonProps`, `CheckoutMode`, `CashierLanguage`, `UseCheckoutReturn`, `UseCustomerReturn`, `CustomerActionState<T>`, `QueryState<T>`, `SalesOverview`, `SubscriptionOverview`, `WebhookConfig`.
+Key types: `PriceInfo`, `PriceSnapshot`, `BillingDetail`, `WebhookEvent`, `CheckoutAction`, `CustomerTokenAction`, `CustomerSessionAction`, `MerchantQueryAction`, `CustomerConfig`, `CheckoutButtonProps`, `CheckoutMode`, `CashierLanguage`, `UseCheckoutReturn`, `UseCustomerReturn`, `CustomerActionState<T>`, `QueryState<T>`, `SalesOverview`, `SubscriptionOverview`, `WebhookConfig`.
 
 ## Development
 

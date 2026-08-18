@@ -18,6 +18,7 @@ export { WaffoPancakeError, TaxCategory, WebhookEventType } from "@waffo/pancake
 
 export type {
   PriceInfo,
+  PriceSnapshot,
   BillingDetail,
   RequestedAmount,
   RefundTicketVersionData,
