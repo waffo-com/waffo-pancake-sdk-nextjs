@@ -14,7 +14,7 @@ Documentation only — the `useCheckout` example renders as code again, and pre-
 
 ### Changed
 
-- `billingDetail` no longer couples the hosted cashier to a payment market. The cashier's market adapts to the customer's own environment, and `includePaymentMethods` / `excludePaymentMethods` are the only constraint on which methods it offers; the billing country affects tax calculation and invoice attribution only. No API change in this package.
+- `billingDetail` no longer couples the hosted cashier to a payment market. The cashier's market adapts to the customer's own environment. Within what the product type × currency pair supports, `includePaymentMethods` / `excludePaymentMethods` remain the only merchant-side channel constraint on which methods the cashier offers — but only on the `anonymous` and `authenticated` flows, which reach the API through your server action's API Key. **`type: "link"` (Store Slug) checkouts never carry them**: the URL is built client-side from a fixed set of query parameters, and a Store Slug session always offers every method the currency supports. The billing country affects tax calculation and invoice attribution only. No API change in this package.
 
 ---
 
