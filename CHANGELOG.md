@@ -4,6 +4,20 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-08-20
+
+Documentation only — the `useCheckout` example renders as code again, and pre-filling a billing country does not restrict the hosted cashier.
+
+### Fixed
+
+- **The `useCheckout` example in the README is a valid TSX block again.** A prose note had been placed inside the tsx code fence, which left the example unrenderable as code.
+
+### Changed
+
+- `billingDetail` no longer couples the hosted cashier to a payment market. The cashier's market adapts to the customer's own environment, and `includePaymentMethods` / `excludePaymentMethods` are the only constraint on which methods it offers; the billing country affects tax calculation and invoice attribution only. No API change in this package.
+
+---
+
 ## [0.6.0] - 2026-08-18
 
 Picks up the trial period price types from `@waffo/pancake-ts` 0.19.0.
