@@ -253,7 +253,7 @@ export const POST = Webhook({
 });
 ```
 
-Returns `200` on success, `401` on invalid signature, `500` if a handler throws. Full event list: `onOrderCompleted`, `onSubscriptionActivated`, `onSubscriptionPaymentSucceeded`, `onSubscriptionCanceling`, `onSubscriptionUncanceled`, `onSubscriptionUpdated`, `onSubscriptionCanceled`, `onSubscriptionPastDue`, `onRefundSucceeded`, `onRefundFailed`.
+Returns `200` on success, `401` on invalid signature, `500` if a handler throws. Full event list: `onOrderCompleted`, `onSubscriptionActivated`, `onSubscriptionPaymentSucceeded`, `onSubscriptionRenewed`, `onSubscriptionRecovered`, `onSubscriptionPlanChanged`, `onSubscriptionPlanChangeScheduled`, `onSubscriptionPlanChangeFailed`, `onSubscriptionCanceling`, `onSubscriptionUncanceled`, `onSubscriptionCanceled`, `onSubscriptionPastDue`, `onRefundSucceeded`, `onRefundFailed`.
 
 ## Customer Self-Service
 

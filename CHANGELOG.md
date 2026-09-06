@@ -4,6 +4,26 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-09-02
+
+Picks up the narrowed webhook contract from `@waffo/pancake-ts` 0.20.0.
+
+### Removed
+
+- **`onSubscriptionUpdated`** — the platform has no publisher for `subscription.updated`. Plan changes dispatch to `onSubscriptionPlanChanged`.
+
+### Added
+
+- **`onSubscriptionRenewed`** (`subscription.renewed`) — the current billing period rolled forward. Carries the new period; use it where you previously read the period off `subscription.payment_succeeded`.
+- **`onSubscriptionRecovered`** (`subscription.recovered`) — a retried charge brought a past-due subscription back to active.
+- **`onSubscriptionPlanChanged`**, **`onSubscriptionPlanChangeScheduled`**, **`onSubscriptionPlanChangeFailed`** — the three plan-change events.
+
+### Changed
+
+- `@waffo/pancake-ts` dependency range raised to `^0.20.0`. `subscription.payment_succeeded` no longer carries `billingPeriod`, `currentPeriodStart`, `currentPeriodEnd`, `canceledAt` or `orderStatus` — see that package's webhook guide for the migration path.
+
+---
+
 ## [0.6.0] - 2026-08-18
 
 Picks up the trial period price types from `@waffo/pancake-ts` 0.19.0.

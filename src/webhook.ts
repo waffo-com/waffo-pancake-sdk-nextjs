@@ -17,14 +17,22 @@ export interface WebhookConfig {
   onOrderCompleted?: EventHandler;
   /** Subscription first payment succeeded (newly activated) */
   onSubscriptionActivated?: EventHandler;
-  /** Subscription renewal payment succeeded */
+  /** Subscription payment succeeded — a pure payment event, carries no subscription period or status */
   onSubscriptionPaymentSucceeded?: EventHandler;
+  /** Current billing period rolled forward (renewal) */
+  onSubscriptionRenewed?: EventHandler;
+  /** Subscription recovered from past due (a retried charge succeeded) */
+  onSubscriptionRecovered?: EventHandler;
+  /** Plan change took effect (upgrade/downgrade) */
+  onSubscriptionPlanChanged?: EventHandler;
+  /** Plan change confirmed, takes effect next billing period */
+  onSubscriptionPlanChangeScheduled?: EventHandler;
+  /** Plan change did not complete, the current plan stays in effect */
+  onSubscriptionPlanChangeFailed?: EventHandler;
   /** Customer initiated cancellation (expires at end of current period) */
   onSubscriptionCanceling?: EventHandler;
   /** Customer withdrew cancellation (subscription restored) */
   onSubscriptionUncanceled?: EventHandler;
-  /** Subscription product changed (upgrade/downgrade) */
-  onSubscriptionUpdated?: EventHandler;
   /** Subscription fully terminated */
   onSubscriptionCanceled?: EventHandler;
   /** Renewal payment failed (past due) */
@@ -40,9 +48,13 @@ const EVENT_HANDLER_MAP: Record<string, keyof WebhookConfig> = {
   "order.completed": "onOrderCompleted",
   "subscription.activated": "onSubscriptionActivated",
   "subscription.payment_succeeded": "onSubscriptionPaymentSucceeded",
+  "subscription.renewed": "onSubscriptionRenewed",
+  "subscription.recovered": "onSubscriptionRecovered",
+  "subscription.plan_changed": "onSubscriptionPlanChanged",
+  "subscription.plan_change_scheduled": "onSubscriptionPlanChangeScheduled",
+  "subscription.plan_change_failed": "onSubscriptionPlanChangeFailed",
   "subscription.canceling": "onSubscriptionCanceling",
   "subscription.uncanceled": "onSubscriptionUncanceled",
-  "subscription.updated": "onSubscriptionUpdated",
   "subscription.canceled": "onSubscriptionCanceled",
   "subscription.past_due": "onSubscriptionPastDue",
   "refund.succeeded": "onRefundSucceeded",
