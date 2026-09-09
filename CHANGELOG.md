@@ -4,6 +4,20 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-09-09
+
+Picks up the billing-period sequence number from `@waffo/pancake-ts` 0.21.0.
+
+### Changed
+
+- `@waffo/pancake-ts` dependency range raised to `^0.21.0`. Handler payloads typed `WebhookEventData` now expose **`periodNumber`** — the billing-period sequence number (integer, >= 1), present on `subscription.activated`, `subscription.payment_succeeded`, `subscription.renewed`, `subscription.recovered`, `subscription.past_due`, `subscription.canceling`, `subscription.uncanceled` and `subscription.canceled`. Match a charge to the period it paid for with `orderId` + `periodNumber` on both sides — `onSubscriptionPaymentSucceeded` and `onSubscriptionRenewed` carry the same number for the same period — instead of checking whether `paymentDate` falls inside a period.
+
+  The key is **absent, not `null`**, for subscriptions that predate period numbers; those never receive a number, not even on later renewals. Branch on `"periodNumber" in event.data` and keep the date-range fallback for them. See that package's webhook guide for the numbering rules per event and the trial / plan-change / past-due semantics.
+
+- `subscription.renewed` delivery deduplication keys off the period number when the subscription has one, so `eventId` on that event changes shape. Treat `eventId` as an opaque string for idempotency, as before.
+
+---
+
 ## [0.7.0] - 2026-09-02
 
 Picks up the narrowed webhook contract from `@waffo/pancake-ts` 0.20.0.
