@@ -245,7 +245,18 @@ const authed = await checkout({
 
 - `changeAmount` sets what you charge for this period, `changeCreditAmount` how much you credit against it — same unit and tax basis, opposite meaning, mutually exclusive, and sending both is rejected with a 400.
 - There is no anonymous plan change: a Store Slug session has no subscription to attribute the change to, and the platform answers 403.
-- To let customers start a change themselves from the customer portal, switch on `selfServicePlanChange` on the product group with `@waffo/pancake-ts`.
+- To let customers start a change themselves, switch on `selfServicePlanChange` on the product group, then call the customer session action — that path is the only one the switch gates:
+
+```tsx
+// Server action from createCustomerSessionAction()
+const session = await customerAction(customerToken, "createPlanChangeSession", {
+  originOrderId: "ORD_xxx",
+  productId: "PROD_target_plan",
+  currency: "USD",
+});
+```
+
+The customer path has three preconditions, each answered with 403: the subscription belongs to that customer, the target plan is in the **same product group**, and that group's `selfServicePlanChange` is on. Its params carry none of the merchant-only pricing fields — the platform drops them on this path without saying so — and customer session calls are not idempotent, so guard retries where a duplicate would matter.
 
 ### Navigation Modes
 

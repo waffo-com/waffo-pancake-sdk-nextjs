@@ -12,6 +12,8 @@ Picks up plan change links from `@waffo/pancake-ts` 0.23.0.
 
 - **`CheckoutActionParams` accepts two plan change shapes.** `type: "planChange"` issues a link that changes an existing subscription to another plan (`originOrderId` required, delegates to `checkout.createPlanChangeSession()`); `type: "authenticatedPlanChange"` does the same with a customer identity, appending the issued session token to the URL (`checkout.authenticated.createPlanChange()`). The returned `checkoutUrl` points at the change confirmation page (`…/store/{slug}/change/{sessionId}`), so redirect the customer there rather than to the cashier. There is no anonymous plan change — a Store Slug session has no subscription to attribute the change to.
 
+- **`CustomerSessionActionType` gains `createPlanChangeSession`** — the customer-driven half of a plan change, delegating to the customer session method of the same name. This is the path `selfServicePlanChange` gates: the platform requires the subscription to belong to that customer, the target plan to be in the same product group, and that group's switch to be on, answering 403 otherwise. Its params carry none of the merchant-only pricing fields, and — like every customer session call — the request has no idempotency key.
+
 ### Changed
 
 - **`@waffo/pancake-ts` dependency raised to `^0.23.0`** — the version that introduces the plan change methods and `GroupRules.selfServicePlanChange`.

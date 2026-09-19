@@ -160,6 +160,7 @@ export type CustomerSessionActionType =
   | "reactivateSubscription"
   | "createRefundTicket"
   | "resubmitRefundTicket"
+  | "createPlanChangeSession"
   | "query";
 
 /** Server action signature for customer session operations */
@@ -170,6 +171,15 @@ export type CustomerSessionAction = (token: string, actionType: CustomerSessionA
  *
  * `config.environment` is required — session tokens carry no environment, and the
  * gateway rejects a session request without the matching header.
+ *
+ * `createPlanChangeSession` is the customer-driven half of a plan change: it returns
+ * a confirmation-page URL, and the platform allows it only when the subscription
+ * belongs to that customer, the target plan is in the same product group, and that
+ * group's `selfServicePlanChange` is on — otherwise 403. The merchant-only pricing
+ * fields are not part of its params; the platform drops them on this path silently.
+ *
+ * Customer session calls carry no idempotency key, so a write retried after a
+ * timeout can execute twice.
  *
  * @param config - WaffoPancake client configuration
  * @returns A server action function
@@ -202,6 +212,8 @@ export function createCustomerSessionAction(config: WaffoPancakeConfig): Custome
         return customer.createRefundTicket(params as Parameters<typeof customer.createRefundTicket>[0]);
       case "resubmitRefundTicket":
         return customer.resubmitRefundTicket(params as Parameters<typeof customer.resubmitRefundTicket>[0]);
+      case "createPlanChangeSession":
+        return customer.createPlanChangeSession(params as Parameters<typeof customer.createPlanChangeSession>[0]);
       case "query":
         return customer.graphql.query(params as GraphQLParams);
       default:
