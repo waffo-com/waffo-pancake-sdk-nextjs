@@ -4,6 +4,18 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-09-19
+
+Picks up plan change links from `@waffo/pancake-ts` 0.23.0.
+
+### Added
+
+- **`CheckoutActionParams` accepts two plan change shapes.** `type: "planChange"` issues a link that changes an existing subscription to another plan (`originOrderId` required, delegates to `checkout.createPlanChangeSession()`); `type: "authenticatedPlanChange"` does the same with a customer identity, appending the issued session token to the URL (`checkout.authenticated.createPlanChange()`). The returned `checkoutUrl` points at the change confirmation page (`…/store/{slug}/change/{sessionId}`), so redirect the customer there rather than to the cashier. There is no anonymous plan change — a Store Slug session has no subscription to attribute the change to.
+
+### Changed
+
+- **`@waffo/pancake-ts` dependency raised to `^0.23.0`** — the version that introduces the plan change methods and `GroupRules.selfServicePlanChange`.
+
 ## [0.7.0] - 2026-09-02
 
 Picks up the narrowed webhook contract from `@waffo/pancake-ts` 0.20.0.

@@ -67,6 +67,8 @@ Waffo supports three checkout modes based on how much control the merchant needs
 | **Anonymous**     | omit              |         Yes          | API-level control without customer identity. Customer fills in details on checkout page. |
 | **Authenticated** | `"authenticated"` |         Yes          | Merchant provides customer identity. Form pre-filled. Enables customer self-service.     |
 
+Changing the plan of an existing subscription is a fourth shape of the same server action — see [Plan Change Links](#plan-change-links).
+
 > **We recommend authenticated checkout whenever possible.** It binds orders to a stable merchant-controlled identifier. In anonymous mode, the customer self-reports their email — if they enter a different address, previous orders become unlinked and subscription trial periods can be exploited.
 
 ### Link Checkout
@@ -204,6 +206,46 @@ const { checkout, isLoading, error } = useCheckout({
   {isLoading ? "Creating session..." : "Buy Now"}
 </button>;
 ```
+
+### Plan Change Links
+
+Switching an existing subscription to another plan is issued server-side: the same `createCheckoutAction()` action takes `type: "planChange"` (or `"authenticatedPlanChange"`), with `originOrderId` required. The returned `checkoutUrl` points at the change confirmation page (`…/store/{slug}/change/{sessionId}`), so send the customer there instead of the cashier.
+
+```tsx
+// app/actions.ts
+"use server";
+import { ChangeTiming } from "@waffo/pancake-nextjs";
+import { createCheckoutAction } from "@waffo/pancake-nextjs/server";
+
+export const checkout = createCheckoutAction({
+  merchantId: process.env.WAFFO_MERCHANT_ID!,
+  privateKey: process.env.WAFFO_PRIVATE_KEY!,
+});
+
+// Anywhere on the server: issue the link and redirect
+const session = await checkout({
+  type: "planChange",
+  originOrderId: "ORD_xxx", // the subscription being changed (required)
+  productId: "PROD_target_plan", // the plan to switch to
+  currency: "USD",
+  changeTiming: ChangeTiming.Immediate, // omit to let the platform derive it
+  changeCreditAmount: "8.00", // "credit this much" — or changeAmount, never both
+});
+redirect(session.checkoutUrl);
+
+// Authenticated form: the customer session token is appended to the URL
+const authed = await checkout({
+  type: "authenticatedPlanChange",
+  originOrderId: "ORD_xxx",
+  productId: "PROD_target_plan",
+  currency: "USD",
+  buyerIdentity: user.id,
+});
+```
+
+- `changeAmount` sets what you charge for this period, `changeCreditAmount` how much you credit against it — same unit and tax basis, opposite meaning, mutually exclusive, and sending both is rejected with a 400.
+- There is no anonymous plan change: a Store Slug session has no subscription to attribute the change to, and the platform answers 403.
+- To let customers start a change themselves from the customer portal, switch on `selfServicePlanChange` on the product group with `@waffo/pancake-ts`.
 
 ### Navigation Modes
 
@@ -406,12 +448,12 @@ All merchant hooks return `{ data, isLoading, error, refetch }`.
 
 ## Server Actions
 
-| Factory                               | Returns                 | Description                                           |
-| ------------------------------------- | ----------------------- | ----------------------------------------------------- |
-| `createCheckoutAction(config)`        | `CheckoutAction`        | Checkout session creation (anonymous + authenticated) |
-| `createCustomerTokenAction(config)`   | `CustomerTokenAction`   | Customer session token issuance                       |
-| `createCustomerSessionAction(config)` | `CustomerSessionAction` | Customer self-service operations                      |
-| `createMerchantQueryAction(config)`   | `MerchantQueryAction`   | Merchant GraphQL queries                              |
+| Factory                               | Returns                 | Description                                                                                                            |
+| ------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `createCheckoutAction(config)`        | `CheckoutAction`        | Checkout session creation (anonymous + authenticated) and plan change links (`planChange` + `authenticatedPlanChange`) |
+| `createCustomerTokenAction(config)`   | `CustomerTokenAction`   | Customer session token issuance                                                                                        |
+| `createCustomerSessionAction(config)` | `CustomerSessionAction` | Customer self-service operations                                                                                       |
+| `createMerchantQueryAction(config)`   | `MerchantQueryAction`   | Merchant GraphQL queries                                                                                               |
 
 Import from `@waffo/pancake-nextjs/server`. Config requires `merchantId` and `privateKey`.
 
@@ -423,6 +465,7 @@ Import from `@waffo/pancake-nextjs/server`. Config requires `merchantId` and `pr
 | ------------------- | ------------------------------------------------------------------------------------------------ |
 | `WaffoPancakeError` | API error with HTTP status and call-stack errors                                                 |
 | `TaxCategory`       | `DigitalGoods`, `SaaS`, `Software`, `Ebook`, `OnlineCourse`, `Consulting`, `ProfessionalService` |
+| `ChangeTiming`      | `Immediate`, `NextPeriod` — when a plan change takes effect                                      |
 | `WebhookEventType`  | `OrderCompleted`, `SubscriptionActivated`, `SubscriptionCanceled`, etc.                          |
 
 ### Types

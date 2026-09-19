@@ -26,6 +26,8 @@ import type {
   WaffoPancakeConfig,
   AnonymousCheckoutParams,
   AuthenticatedCheckoutParams,
+  AuthenticatedPlanChangeParams,
+  CreatePlanChangeSessionParams,
   CheckoutSessionResult,
   AuthenticatedCheckoutResult,
   IssueSessionTokenParams,
@@ -38,10 +40,18 @@ import type {
 // Checkout Action
 // ============================================================
 
-/** Parameters for the checkout server action */
+/**
+ * Parameters for the checkout server action.
+ *
+ * The `type` field selects the flow: a new purchase (`anonymous` / `authenticated`)
+ * or a plan change for an existing subscription (`planChange` /
+ * `authenticatedPlanChange`, which carry the required `originOrderId`).
+ */
 export type CheckoutActionParams =
   | ({ type?: "anonymous" } & AnonymousCheckoutParams)
-  | ({ type: "authenticated" } & AuthenticatedCheckoutParams);
+  | ({ type: "authenticated" } & AuthenticatedCheckoutParams)
+  | ({ type: "planChange" } & CreatePlanChangeSessionParams)
+  | ({ type: "authenticatedPlanChange" } & AuthenticatedPlanChangeParams);
 
 /** Result of the checkout server action */
 export type CheckoutActionResult = CheckoutSessionResult | AuthenticatedCheckoutResult;
@@ -53,6 +63,8 @@ export type CheckoutAction = (params: CheckoutActionParams) => Promise<CheckoutA
  * Create a server action that handles checkout session creation.
  *
  * The private key is captured in the closure and never sent to the client.
+ *
+ * Handles both new purchases and plan changes; `params.type` selects the flow.
  *
  * @param config - WaffoPancake client configuration (merchantId + privateKey)
  * @returns A server action function
@@ -67,6 +79,18 @@ export type CheckoutAction = (params: CheckoutActionParams) => Promise<CheckoutA
  *   privateKey: process.env.WAFFO_PRIVATE_KEY!,
  * });
  * ```
+ *
+ * @example
+ * ```ts
+ * // Plan change link for an existing subscription — originOrderId is required
+ * const session = await checkout({
+ *   type: "planChange",
+ *   originOrderId: "ORD_xxx",
+ *   productId: "PROD_target_plan",
+ *   currency: "USD",
+ * });
+ * // session.checkoutUrl points at the change confirmation page
+ * ```
  */
 export function createCheckoutAction(config: WaffoPancakeConfig): CheckoutAction {
   const client = new WaffoPancake(config);
@@ -76,6 +100,16 @@ export function createCheckoutAction(config: WaffoPancakeConfig): CheckoutAction
       // eslint-disable-next-line @typescript-eslint/no-unused-vars -- remove type field before passing to SDK
       const { type, ...sdkParams } = params;
       return client.checkout.authenticated.create(sdkParams);
+    }
+    if (params.type === "planChange") {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- remove type field before passing to SDK
+      const { type, ...sdkParams } = params;
+      return client.checkout.createPlanChangeSession(sdkParams);
+    }
+    if (params.type === "authenticatedPlanChange") {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- remove type field before passing to SDK
+      const { type, ...sdkParams } = params;
+      return client.checkout.authenticated.createPlanChange(sdkParams);
     }
     // eslint-disable-next-line @typescript-eslint/no-unused-vars -- remove type field before passing to SDK
     const { type, ...sdkParams } = params;
