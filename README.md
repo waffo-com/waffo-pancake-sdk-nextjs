@@ -67,6 +67,8 @@ Waffo supports three checkout modes based on how much control the merchant needs
 | **Anonymous**     | omit              |         Yes          | API-level control without customer identity. Customer fills in details on checkout page. |
 | **Authenticated** | `"authenticated"` |         Yes          | Merchant provides customer identity. Form pre-filled. Enables customer self-service.     |
 
+Changing the plan of an existing subscription is a fourth shape of the same server action — see [Plan Change Links](#plan-change-links).
+
 > **We recommend authenticated checkout whenever possible.** It binds orders to a stable merchant-controlled identifier. In anonymous mode, the customer self-reports their email — if they enter a different address, previous orders become unlinked and subscription trial periods can be exploited.
 
 ### Link Checkout
@@ -204,6 +206,57 @@ const { checkout, isLoading, error } = useCheckout({
   {isLoading ? "Creating session..." : "Buy Now"}
 </button>;
 ```
+
+### Plan Change Links
+
+Switching an existing subscription to another plan is issued server-side: the same `createCheckoutAction()` action takes `type: "planChange"` (or `"authenticatedPlanChange"`), with `originOrderId` required. The returned `checkoutUrl` points at the change confirmation page (`…/store/{slug}/change/{sessionId}`), so send the customer there instead of the cashier.
+
+```tsx
+// app/actions.ts
+"use server";
+import { ChangeTiming } from "@waffo/pancake-nextjs";
+import { createCheckoutAction } from "@waffo/pancake-nextjs/server";
+
+export const checkout = createCheckoutAction({
+  merchantId: process.env.WAFFO_MERCHANT_ID!,
+  privateKey: process.env.WAFFO_PRIVATE_KEY!,
+});
+
+// Anywhere on the server: issue the link and redirect
+const session = await checkout({
+  type: "planChange",
+  originOrderId: "ORD_xxx", // the subscription being changed (required)
+  productId: "PROD_target_plan", // the plan to switch to
+  currency: "USD",
+  changeTiming: ChangeTiming.Immediate, // omit to let the platform derive it
+  changeCreditAmount: "8.00", // "credit this much" — or changeAmount, never both
+});
+redirect(session.checkoutUrl);
+
+// Authenticated form: the customer session token is appended to the URL
+const authed = await checkout({
+  type: "authenticatedPlanChange",
+  originOrderId: "ORD_xxx",
+  productId: "PROD_target_plan",
+  currency: "USD",
+  buyerIdentity: user.id,
+});
+```
+
+- `changeAmount` sets what you charge for this period, `changeCreditAmount` how much you credit against it — same unit and tax basis, opposite meaning, mutually exclusive, and sending both is rejected with a 400.
+- There is no anonymous plan change: a Store Slug session has no subscription to attribute the change to, and the platform answers 403.
+- To let customers start a change themselves, switch on `selfServicePlanChange` on the product group, then call the customer session action — that path is the only one the switch gates:
+
+```tsx
+// Server action from createCustomerSessionAction()
+const session = await customerAction(customerToken, "createPlanChangeSession", {
+  originOrderId: "ORD_xxx",
+  productId: "PROD_target_plan",
+  currency: "USD",
+});
+```
+
+The customer path has three preconditions, each answered with 403: the subscription belongs to that customer, the target plan is in the **same product group**, and that group's `selfServicePlanChange` is on. Its params carry none of the merchant-only pricing fields — the platform drops them on this path without saying so. See [Idempotency](#idempotency) for retry safety.
 
 ### Navigation Modes
 
@@ -406,14 +459,32 @@ All merchant hooks return `{ data, isLoading, error, refetch }`.
 
 ## Server Actions
 
-| Factory                               | Returns                 | Description                                           |
-| ------------------------------------- | ----------------------- | ----------------------------------------------------- |
-| `createCheckoutAction(config)`        | `CheckoutAction`        | Checkout session creation (anonymous + authenticated) |
-| `createCustomerTokenAction(config)`   | `CustomerTokenAction`   | Customer session token issuance                       |
-| `createCustomerSessionAction(config)` | `CustomerSessionAction` | Customer self-service operations                      |
-| `createMerchantQueryAction(config)`   | `MerchantQueryAction`   | Merchant GraphQL queries                              |
+| Factory                               | Returns                 | Description                                                                                                            |
+| ------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `createCheckoutAction(config)`        | `CheckoutAction`        | Checkout session creation (anonymous + authenticated) and plan change links (`planChange` + `authenticatedPlanChange`) |
+| `createCustomerTokenAction(config)`   | `CustomerTokenAction`   | Customer session token issuance                                                                                        |
+| `createCustomerSessionAction(config)` | `CustomerSessionAction` | Customer self-service operations                                                                                       |
+| `createMerchantQueryAction(config)`   | `MerchantQueryAction`   | Merchant GraphQL queries                                                                                               |
 
 Import from `@waffo/pancake-nextjs/server`. Config requires `merchantId` and `privateKey`.
+
+## Idempotency
+
+**No idempotency key is sent unless you pass one.** Neither this package nor `@waffo/pancake-ts` derives keys, so a write that times out and gets retried executes a second time.
+
+Every server action takes an optional trailing options object that is forwarded to the SDK:
+
+```tsx
+// Checkout / plan change
+const session = await checkout({ productId: "PROD_xxx", currency: "USD" }, { idempotencyKey: `MER_checkout-${cartId}` });
+
+// Customer self-service
+await customerAction(token, "createRefundTicket", ticketParams, { idempotencyKey: `MER_refund-${orderId}` });
+```
+
+With a key: the first request executes and its 2xx response is cached for **24 hours**, the same key returns that cached response, the same key while the original is in flight returns **409**, and a non-2xx original leaves the key free to retry. Without one nothing is deduplicated.
+
+Uniqueness is yours to guarantee (at most 256 characters of letters, numbers, hyphens and underscores; a malformed key is rejected with a 400), and one key must not be reused across two different calls. `createMerchantQueryAction` takes no options — GraphQL queries are reads.
 
 ## Exports
 
@@ -423,11 +494,12 @@ Import from `@waffo/pancake-nextjs/server`. Config requires `merchantId` and `pr
 | ------------------- | ------------------------------------------------------------------------------------------------ |
 | `WaffoPancakeError` | API error with HTTP status and call-stack errors                                                 |
 | `TaxCategory`       | `DigitalGoods`, `SaaS`, `Software`, `Ebook`, `OnlineCourse`, `Consulting`, `ProfessionalService` |
+| `ChangeTiming`      | `Immediate`, `NextPeriod` — when a plan change takes effect                                      |
 | `WebhookEventType`  | `OrderCompleted`, `SubscriptionActivated`, `SubscriptionCanceled`, etc.                          |
 
 ### Types
 
-Key types: `PriceInfo`, `PriceSnapshot`, `BillingDetail`, `WebhookEvent`, `CheckoutAction`, `CustomerTokenAction`, `CustomerSessionAction`, `MerchantQueryAction`, `CustomerConfig`, `CheckoutButtonProps`, `CheckoutMode`, `CashierLanguage`, `UseCheckoutReturn`, `UseCustomerReturn`, `CustomerActionState<T>`, `QueryState<T>`, `SalesOverview`, `SubscriptionOverview`, `WebhookConfig`.
+Key types: `PriceInfo`, `PriceSnapshot`, `BillingDetail`, `RequestOptions`, `WebhookEvent`, `CheckoutAction`, `CustomerTokenAction`, `CustomerSessionAction`, `MerchantQueryAction`, `CustomerConfig`, `CheckoutButtonProps`, `CheckoutMode`, `CashierLanguage`, `UseCheckoutReturn`, `UseCustomerReturn`, `CustomerActionState<T>`, `QueryState<T>`, `SalesOverview`, `SubscriptionOverview`, `WebhookConfig`.
 
 ## Development
 

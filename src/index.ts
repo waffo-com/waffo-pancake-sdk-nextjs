@@ -14,7 +14,7 @@ export { useMerchantOrders, useMerchantSales, useMerchantSubscriptions } from ".
 export { Webhook } from "./webhook.js";
 
 // Re-export types commonly used in client components
-export { WaffoPancakeError, TaxCategory, WebhookEventType } from "@waffo/pancake-ts";
+export { WaffoPancakeError, ChangeTiming, TaxCategory, WebhookEventType } from "@waffo/pancake-ts";
 
 export type {
   PriceInfo,
@@ -26,6 +26,7 @@ export type {
   WebhookEventData,
   CashierLanguage,
   PaymentMethod,
+  RequestOptions,
 } from "@waffo/pancake-ts";
 
 // Local types

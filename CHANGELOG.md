@@ -4,6 +4,22 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-09-20
+
+Picks up plan change links from `@waffo/pancake-ts` 0.23.0, **and its idempotency change** — see the BREAKING entries under Changed before upgrading.
+
+### Added
+
+- **`CheckoutActionParams` accepts two plan change shapes.** `type: "planChange"` issues a link that changes an existing subscription to another plan (`originOrderId` required, delegates to `checkout.createPlanChangeSession()`); `type: "authenticatedPlanChange"` does the same with a customer identity, appending the issued session token to the URL (`checkout.authenticated.createPlanChange()`). The returned `checkoutUrl` points at the change confirmation page (`…/store/{slug}/change/{sessionId}`), so redirect the customer there rather than to the cashier. There is no anonymous plan change — a Store Slug session has no subscription to attribute the change to.
+
+- **`CustomerSessionActionType` gains `createPlanChangeSession`** — the customer-driven half of a plan change, delegating to the customer session method of the same name. This is the path `selfServicePlanChange` gates: the platform requires the subscription to belong to that customer, the target plan to be in the same product group, and that group's switch to be on, answering 403 otherwise. Its params carry none of the merchant-only pricing fields, and — like every customer session call — the request has no idempotency key.
+
+### Changed
+
+- **BREAKING: no idempotency key is sent any more unless you pass one.** `@waffo/pancake-ts` 0.23.0 stopped deriving keys, so every write that goes through a server action here is no longer deduplicated by the gateway: a call retried after a timeout executes twice. To keep retry safety, pass a key as the new optional last argument — `checkout(params, { idempotencyKey })`, `issueCustomerToken(params, { idempotencyKey })`, `customerAction(token, type, params, { idempotencyKey })`. Uniqueness is yours to guarantee (≤256 chars of letters, numbers, `-`, `_`). No compensating behavior was added: no automatic retry, no local dedup, no fallback key.
+- **`CheckoutAction`, `CustomerTokenAction` and `CustomerSessionAction` gained an optional trailing `RequestOptions`** and re-export that type. Existing call sites are unaffected — the argument is optional. `MerchantQueryAction` is unchanged: GraphQL queries are reads and take no key.
+- **`@waffo/pancake-ts` dependency raised to `^0.23.0`** — the version that introduces the plan change methods and `GroupRules.selfServicePlanChange`.
+
 ## [0.7.0] - 2026-09-02
 
 Picks up the narrowed webhook contract from `@waffo/pancake-ts` 0.20.0.
