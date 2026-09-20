@@ -23,6 +23,7 @@
 import { WaffoPancake } from "@waffo/pancake-ts";
 
 import type {
+  RequestOptions,
   WaffoPancakeConfig,
   AnonymousCheckoutParams,
   AuthenticatedCheckoutParams,
@@ -56,8 +57,13 @@ export type CheckoutActionParams =
 /** Result of the checkout server action */
 export type CheckoutActionResult = CheckoutSessionResult | AuthenticatedCheckoutResult;
 
-/** Server action signature for checkout */
-export type CheckoutAction = (params: CheckoutActionParams) => Promise<CheckoutActionResult>;
+/**
+ * Server action signature for checkout.
+ *
+ * The optional `options` carries an `idempotencyKey`; without one no key is sent
+ * and a retried call creates a second session.
+ */
+export type CheckoutAction = (params: CheckoutActionParams, options?: RequestOptions) => Promise<CheckoutActionResult>;
 
 /**
  * Create a server action that handles checkout session creation.
@@ -95,25 +101,25 @@ export type CheckoutAction = (params: CheckoutActionParams) => Promise<CheckoutA
 export function createCheckoutAction(config: WaffoPancakeConfig): CheckoutAction {
   const client = new WaffoPancake(config);
 
-  return async (params: CheckoutActionParams): Promise<CheckoutActionResult> => {
+  return async (params: CheckoutActionParams, options?: RequestOptions): Promise<CheckoutActionResult> => {
     if (params.type === "authenticated") {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars -- remove type field before passing to SDK
       const { type, ...sdkParams } = params;
-      return client.checkout.authenticated.create(sdkParams);
+      return client.checkout.authenticated.create(sdkParams, options);
     }
     if (params.type === "planChange") {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars -- remove type field before passing to SDK
       const { type, ...sdkParams } = params;
-      return client.checkout.createPlanChangeSession(sdkParams);
+      return client.checkout.createPlanChangeSession(sdkParams, options);
     }
     if (params.type === "authenticatedPlanChange") {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars -- remove type field before passing to SDK
       const { type, ...sdkParams } = params;
-      return client.checkout.authenticated.createPlanChange(sdkParams);
+      return client.checkout.authenticated.createPlanChange(sdkParams, options);
     }
     // eslint-disable-next-line @typescript-eslint/no-unused-vars -- remove type field before passing to SDK
     const { type, ...sdkParams } = params;
-    return client.checkout.anonymous.create(sdkParams);
+    return client.checkout.anonymous.create(sdkParams, options);
   };
 }
 
@@ -122,7 +128,7 @@ export function createCheckoutAction(config: WaffoPancakeConfig): CheckoutAction
 // ============================================================
 
 /** Server action signature for issuing customer tokens */
-export type CustomerTokenAction = (params: IssueSessionTokenParams) => Promise<SessionToken>;
+export type CustomerTokenAction = (params: IssueSessionTokenParams, options?: RequestOptions) => Promise<SessionToken>;
 
 /**
  * Create a server action that issues customer session tokens.
@@ -144,8 +150,8 @@ export type CustomerTokenAction = (params: IssueSessionTokenParams) => Promise<S
 export function createCustomerTokenAction(config: WaffoPancakeConfig): CustomerTokenAction {
   const client = new WaffoPancake(config);
 
-  return async (params: IssueSessionTokenParams): Promise<SessionToken> => {
-    return client.auth.issueSessionToken(params);
+  return async (params: IssueSessionTokenParams, options?: RequestOptions): Promise<SessionToken> => {
+    return client.auth.issueSessionToken(params, options);
   };
 }
 
@@ -164,7 +170,12 @@ export type CustomerSessionActionType =
   | "query";
 
 /** Server action signature for customer session operations */
-export type CustomerSessionAction = (token: string, actionType: CustomerSessionActionType, params: unknown) => Promise<unknown>;
+export type CustomerSessionAction = (
+  token: string,
+  actionType: CustomerSessionActionType,
+  params: unknown,
+  options?: RequestOptions,
+) => Promise<unknown>;
 
 /**
  * Create a server action that executes customer self-service operations.
@@ -178,8 +189,9 @@ export type CustomerSessionAction = (token: string, actionType: CustomerSessionA
  * group's `selfServicePlanChange` is on — otherwise 403. The merchant-only pricing
  * fields are not part of its params; the platform drops them on this path silently.
  *
- * Customer session calls carry no idempotency key, so a write retried after a
- * timeout can execute twice.
+ * No call sends an idempotency key unless you pass one (`options.idempotencyKey`,
+ * the last argument) — the same rule as every other method in the SDK — so a write
+ * retried after a timeout executes twice.
  *
  * @param config - WaffoPancake client configuration
  * @returns A server action function
@@ -199,22 +211,23 @@ export type CustomerSessionAction = (token: string, actionType: CustomerSessionA
 export function createCustomerSessionAction(config: WaffoPancakeConfig): CustomerSessionAction {
   const client = new WaffoPancake(config);
 
-  return async (token: string, actionType: CustomerSessionActionType, params: unknown): Promise<unknown> => {
+  return async (token: string, actionType: CustomerSessionActionType, params: unknown, options?: RequestOptions): Promise<unknown> => {
     const customer = client.buyer(token);
     switch (actionType) {
       case "cancelSubscription":
-        return customer.cancelSubscription(params as Parameters<typeof customer.cancelSubscription>[0]);
+        return customer.cancelSubscription(params as Parameters<typeof customer.cancelSubscription>[0], options);
       case "cancelOnetimeOrder":
-        return customer.cancelOnetimeOrder(params as Parameters<typeof customer.cancelOnetimeOrder>[0]);
+        return customer.cancelOnetimeOrder(params as Parameters<typeof customer.cancelOnetimeOrder>[0], options);
       case "reactivateSubscription":
-        return customer.reactivateSubscription(params as Parameters<typeof customer.reactivateSubscription>[0]);
+        return customer.reactivateSubscription(params as Parameters<typeof customer.reactivateSubscription>[0], options);
       case "createRefundTicket":
-        return customer.createRefundTicket(params as Parameters<typeof customer.createRefundTicket>[0]);
+        return customer.createRefundTicket(params as Parameters<typeof customer.createRefundTicket>[0], options);
       case "resubmitRefundTicket":
-        return customer.resubmitRefundTicket(params as Parameters<typeof customer.resubmitRefundTicket>[0]);
+        return customer.resubmitRefundTicket(params as Parameters<typeof customer.resubmitRefundTicket>[0], options);
       case "createPlanChangeSession":
-        return customer.createPlanChangeSession(params as Parameters<typeof customer.createPlanChangeSession>[0]);
+        return customer.createPlanChangeSession(params as Parameters<typeof customer.createPlanChangeSession>[0], options);
       case "query":
+        // Reads take no key: a cached replay would serve stale data.
         return customer.graphql.query(params as GraphQLParams);
       default:
         throw new Error(`Unknown customer action: ${actionType}`);

@@ -256,7 +256,7 @@ const session = await customerAction(customerToken, "createPlanChangeSession", {
 });
 ```
 
-The customer path has three preconditions, each answered with 403: the subscription belongs to that customer, the target plan is in the **same product group**, and that group's `selfServicePlanChange` is on. Its params carry none of the merchant-only pricing fields — the platform drops them on this path without saying so — and customer session calls are not idempotent, so guard retries where a duplicate would matter.
+The customer path has three preconditions, each answered with 403: the subscription belongs to that customer, the target plan is in the **same product group**, and that group's `selfServicePlanChange` is on. Its params carry none of the merchant-only pricing fields — the platform drops them on this path without saying so. See [Idempotency](#idempotency) for retry safety.
 
 ### Navigation Modes
 
@@ -468,6 +468,24 @@ All merchant hooks return `{ data, isLoading, error, refetch }`.
 
 Import from `@waffo/pancake-nextjs/server`. Config requires `merchantId` and `privateKey`.
 
+## Idempotency
+
+**No idempotency key is sent unless you pass one.** Neither this package nor `@waffo/pancake-ts` derives keys, so a write that times out and gets retried executes a second time.
+
+Every server action takes an optional trailing options object that is forwarded to the SDK:
+
+```tsx
+// Checkout / plan change
+const session = await checkout({ productId: "PROD_xxx", currency: "USD" }, { idempotencyKey: `MER_checkout-${cartId}` });
+
+// Customer self-service
+await customerAction(token, "createRefundTicket", ticketParams, { idempotencyKey: `MER_refund-${orderId}` });
+```
+
+With a key: the first request executes and its 2xx response is cached for **24 hours**, the same key returns that cached response, the same key while the original is in flight returns **409**, and a non-2xx original leaves the key free to retry. Without one nothing is deduplicated.
+
+Uniqueness is yours to guarantee (at most 256 characters of letters, numbers, hyphens and underscores; a malformed key is rejected with a 400), and one key must not be reused across two different calls. `createMerchantQueryAction` takes no options — GraphQL queries are reads.
+
 ## Exports
 
 ### Classes & Enums
@@ -481,7 +499,7 @@ Import from `@waffo/pancake-nextjs/server`. Config requires `merchantId` and `pr
 
 ### Types
 
-Key types: `PriceInfo`, `PriceSnapshot`, `BillingDetail`, `WebhookEvent`, `CheckoutAction`, `CustomerTokenAction`, `CustomerSessionAction`, `MerchantQueryAction`, `CustomerConfig`, `CheckoutButtonProps`, `CheckoutMode`, `CashierLanguage`, `UseCheckoutReturn`, `UseCustomerReturn`, `CustomerActionState<T>`, `QueryState<T>`, `SalesOverview`, `SubscriptionOverview`, `WebhookConfig`.
+Key types: `PriceInfo`, `PriceSnapshot`, `BillingDetail`, `RequestOptions`, `WebhookEvent`, `CheckoutAction`, `CustomerTokenAction`, `CustomerSessionAction`, `MerchantQueryAction`, `CustomerConfig`, `CheckoutButtonProps`, `CheckoutMode`, `CashierLanguage`, `UseCheckoutReturn`, `UseCustomerReturn`, `CustomerActionState<T>`, `QueryState<T>`, `SalesOverview`, `SubscriptionOverview`, `WebhookConfig`.
 
 ## Development
 

@@ -26,6 +26,7 @@ export type {
   WebhookEventData,
   CashierLanguage,
   PaymentMethod,
+  RequestOptions,
 } from "@waffo/pancake-ts";
 
 // Local types

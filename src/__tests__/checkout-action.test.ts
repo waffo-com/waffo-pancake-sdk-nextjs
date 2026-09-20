@@ -39,7 +39,7 @@ describe("createCheckoutAction", () => {
 
     await checkout({ productId: "PROD_xxx", currency: "USD" });
 
-    expect(anonymousCreate).toHaveBeenCalledWith({ productId: "PROD_xxx", currency: "USD" });
+    expect(anonymousCreate).toHaveBeenCalledWith({ productId: "PROD_xxx", currency: "USD" }, undefined);
     expect(createPlanChangeSession).not.toHaveBeenCalled();
   });
 
@@ -48,7 +48,7 @@ describe("createCheckoutAction", () => {
 
     await checkout({ type: "authenticated", productId: "PROD_xxx", currency: "USD", buyerIdentity: "user-1" });
 
-    expect(authenticatedCreate).toHaveBeenCalledWith({ productId: "PROD_xxx", currency: "USD", buyerIdentity: "user-1" });
+    expect(authenticatedCreate).toHaveBeenCalledWith({ productId: "PROD_xxx", currency: "USD", buyerIdentity: "user-1" }, undefined);
   });
 
   it("should route a planChange type to the plan change session, keeping originOrderId", async () => {
@@ -63,12 +63,15 @@ describe("createCheckoutAction", () => {
     });
 
     // `type` is stripped, every plan change field is forwarded untouched
-    expect(createPlanChangeSession).toHaveBeenCalledWith({
-      originOrderId: "ORD_xxx",
-      productId: "PROD_target",
-      currency: "USD",
-      changeCreditAmount: "8.00",
-    });
+    expect(createPlanChangeSession).toHaveBeenCalledWith(
+      {
+        originOrderId: "ORD_xxx",
+        productId: "PROD_target",
+        currency: "USD",
+        changeCreditAmount: "8.00",
+      },
+      undefined,
+    );
     expect(result.checkoutUrl).toContain("/change/");
   });
 
@@ -83,12 +86,15 @@ describe("createCheckoutAction", () => {
       buyerIdentity: "user-1",
     });
 
-    expect(authenticatedPlanChange).toHaveBeenCalledWith({
-      originOrderId: "ORD_xxx",
-      productId: "PROD_target",
-      currency: "USD",
-      buyerIdentity: "user-1",
-    });
+    expect(authenticatedPlanChange).toHaveBeenCalledWith(
+      {
+        originOrderId: "ORD_xxx",
+        productId: "PROD_target",
+        currency: "USD",
+        buyerIdentity: "user-1",
+      },
+      undefined,
+    );
     expect(result.checkoutUrl).toContain("#token=");
     expect(anonymousCreate).not.toHaveBeenCalled();
   });
@@ -108,11 +114,14 @@ describe("createCustomerSessionAction", () => {
       currency: "USD",
     })) as { checkoutUrl: string };
 
-    expect(customerPlanChange).toHaveBeenCalledWith({
-      originOrderId: "ORD_0000000000000000000000",
-      productId: "PROD_0000000000000000000000",
-      currency: "USD",
-    });
+    expect(customerPlanChange).toHaveBeenCalledWith(
+      {
+        originOrderId: "ORD_0000000000000000000000",
+        productId: "PROD_0000000000000000000000",
+        currency: "USD",
+      },
+      undefined,
+    );
     // The customer path gets a confirmation URL with no token fragment — the
     // caller already holds the session token.
     expect(result.checkoutUrl).toContain("/change/");
@@ -129,5 +138,40 @@ describe("createCustomerSessionAction", () => {
       // @ts-expect-error — not a member of CustomerSessionActionType
       customerAction("customer.jwt", "changePlanWithDiscount", {}),
     ).rejects.toThrow(/Unknown customer action/);
+  });
+});
+
+describe("idempotency key pass-through", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("forwards an explicit key to the checkout SDK call and sends none by default", async () => {
+    const checkout = createCheckoutAction(CONFIG);
+
+    await checkout({ productId: "PROD_xxx", currency: "USD" });
+    await checkout({ productId: "PROD_xxx", currency: "USD" }, { idempotencyKey: "MER_checkout-2026-00891" });
+
+    expect(anonymousCreate).toHaveBeenNthCalledWith(1, { productId: "PROD_xxx", currency: "USD" }, undefined);
+    expect(anonymousCreate).toHaveBeenNthCalledWith(
+      2,
+      { productId: "PROD_xxx", currency: "USD" },
+      { idempotencyKey: "MER_checkout-2026-00891" },
+    );
+  });
+
+  it("forwards an explicit key through the customer session action", async () => {
+    const customerAction = createCustomerSessionAction({ ...CONFIG, environment: "test" });
+
+    await customerAction(
+      "customer.jwt",
+      "createPlanChangeSession",
+      { originOrderId: "ORD_0000000000000000000000", productId: "PROD_0000000000000000000000", currency: "USD" },
+      { idempotencyKey: "MER_self-service-2026-00893" },
+    );
+
+    expect(customerPlanChange).toHaveBeenCalledWith(expect.objectContaining({ originOrderId: "ORD_0000000000000000000000" }), {
+      idempotencyKey: "MER_self-service-2026-00893",
+    });
   });
 });
