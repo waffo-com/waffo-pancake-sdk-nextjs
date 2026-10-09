@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { createCustomerPortalRedirect } from "../server.js";
 
@@ -23,6 +23,11 @@ describe("createCustomerPortalRedirect", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     createCustomerPortalLink.mockResolvedValue({ portalUrl: PORTAL_URL, expiresAt: "2026-04-02T10:15:00.000Z" });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("should 302 to the portal URL for the customer the resolver returns", async () => {
@@ -105,6 +110,35 @@ describe("createCustomerPortalRedirect", () => {
     expectNoStoreNoReferrer(response);
   });
 
+  it("should log one safe line server-side on the default error path", async () => {
+    createCustomerPortalLink.mockRejectedValueOnce(new Error(`upstream failed for ${PORTAL_URL}\nsecond line`));
+    const GET = createCustomerPortalRedirect(CONFIG, {
+      resolveAuthenticatedCustomer: async () => ({ storeId: STORE_ID, buyerIdentity: "user-1" }),
+    });
+
+    await GET(new Request("https://merchant.example/account/portal"));
+
+    expect(console.error).toHaveBeenCalledTimes(1);
+    const args = vi.mocked(console.error).mock.calls[0];
+    expect(args[0]).toBe("[waffo-pancake] createCustomerPortalRedirect failed:");
+    expect(typeof args[1]).toBe("string");
+    const logged = args.join(" ");
+    expect(logged).not.toContain("portal-jwt");
+    expect(logged).toContain("#token=[redacted]");
+    expect(logged).not.toContain("\n");
+  });
+
+  it("should log a non-Error rejection as its string form", async () => {
+    createCustomerPortalLink.mockRejectedValueOnce("network down");
+    const GET = createCustomerPortalRedirect(CONFIG, {
+      resolveAuthenticatedCustomer: async () => ({ storeId: STORE_ID, buyerIdentity: "user-1" }),
+    });
+
+    await GET(new Request("https://merchant.example/account/portal"));
+
+    expect(console.error).toHaveBeenCalledWith("[waffo-pancake] createCustomerPortalRedirect failed:", "network down");
+  });
+
   it("should delegate failures to onError when given", async () => {
     const failure = new Error("boom");
     createCustomerPortalLink.mockRejectedValueOnce(failure);
@@ -119,6 +153,7 @@ describe("createCustomerPortalRedirect", () => {
 
     expect(onError).toHaveBeenCalledWith(failure, request);
     expect(response.status).toBe(503);
+    expect(console.error).not.toHaveBeenCalled();
   });
 
   it("should propagate errors thrown by the resolver", async () => {

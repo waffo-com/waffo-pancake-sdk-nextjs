@@ -202,12 +202,18 @@ export interface CustomerPortalRedirectOptions {
    * Where to send a visitor for whom the resolver returned `null`. A path or
    * absolute URL, resolved against the request URL; a function receives the
    * request (e.g. to add your own `returnTo`). Omit to answer 401 instead.
+   *
+   * Build it from constants or an allow-list, never by copying request
+   * parameters verbatim (e.g. a `?next=` value) — that turns this route into an
+   * open redirect.
    */
   loginUrl?: string | ((request: Request) => string);
   /**
    * Build the response when creating the portal link fails (API error, invalid
-   * store ID, network error). Defaults to a 502 JSON `{ error }` response with a
-   * generic message; the error itself is not echoed to the browser.
+   * store ID, network error). This is the place for your own logging and error
+   * reporting. Defaults to a 502 JSON `{ error }` response with a generic
+   * message, after one `console.error` line carrying only the error message;
+   * the error itself is not echoed to the browser.
    */
   onError?: (error: unknown, request: Request) => Response | Promise<Response>;
 }
@@ -228,6 +234,16 @@ function portalHeaders(extra: Record<string, string>): Headers {
 }
 
 /**
+ * One-line, log-safe description of a portal link failure: the error message
+ * only (never the error object, which may carry a response body), with any
+ * `#token=...` fragment redacted.
+ */
+function safeErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.replace(/#token=[^\s"'&]*/g, "#token=[redacted]").replace(/\s+/g, " ");
+}
+
+/**
  * Create a GET Route Handler that sends the signed-in customer to your store's
  * Pancake customer portal, without the portal's email verification step.
  *
@@ -238,7 +254,8 @@ function portalHeaders(extra: Record<string, string>): Headers {
  * - Signed in: creates a portal link with `client.auth.createCustomerPortalLink()`
  *   and answers `302` to `portalUrl` (which carries `#token=...`)
  * - Not signed in: `302` to `loginUrl` when set, otherwise `401`
- * - Link creation fails: `onError(error, request)`, or `502 { error }` by default
+ * - Link creation fails: `onError(error, request)`, or by default one server-side
+ *   `console.error` line with the error message and a generic `502 { error }`
  *
  * Side effects:
  * - One signed API request per signed-in visit; each visit issues a new portal session
@@ -249,6 +266,9 @@ function portalHeaders(extra: Record<string, string>): Headers {
  * - The portal environment is the environment of the API Key in `config`
  *   (test key → test portal, prod key → prod portal)
  * - Errors thrown by `resolveAuthenticatedCustomer` propagate (Next.js answers 500)
+ * - The default error log is the message only, with any `#token=` fragment redacted;
+ *   pass `onError` to log or report failures your own way
+ * - `loginUrl` must not echo request parameters verbatim, or the route becomes an open redirect
  *
  * A Route Handler rather than a Server Action: the portal entry is a plain link
  * navigation, and only an HTTP redirect keeps the tokenized URL out of client
@@ -263,6 +283,8 @@ function portalHeaders(extra: Record<string, string>): Headers {
  * // app/account/billing-portal/route.ts
  * import { createCustomerPortalRedirect } from "@waffo/pancake-nextjs/server";
  * import { auth } from "@/lib/auth"; // your auth library
+ *
+ * export const dynamic = "force-dynamic";
  *
  * export const GET = createCustomerPortalRedirect(
  *   { merchantId: process.env.WAFFO_MERCHANT_ID!, privateKey: process.env.WAFFO_PRIVATE_KEY! },
@@ -311,6 +333,7 @@ export function createCustomerPortalRedirect(
       if (options.onError) {
         return options.onError(error, request);
       }
+      console.error("[waffo-pancake] createCustomerPortalRedirect failed:", safeErrorMessage(error));
       return new Response(JSON.stringify({ error: "Failed to create customer portal link" }), {
         status: 502,
         headers: portalHeaders({ "Content-Type": "application/json" }),

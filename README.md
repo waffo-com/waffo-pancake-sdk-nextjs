@@ -395,6 +395,8 @@ Send a customer who is signed in to **your** app straight into your store's Panc
 import { createCustomerPortalRedirect } from "@waffo/pancake-nextjs/server";
 import { auth } from "@/lib/auth"; // your auth library
 
+export const dynamic = "force-dynamic"; // per-visit session check and redirect, never statically cached
+
 export const GET = createCustomerPortalRedirect(
   { merchantId: process.env.WAFFO_MERCHANT_ID!, privateKey: process.env.WAFFO_PRIVATE_KEY! },
   {
@@ -413,12 +415,12 @@ export const GET = createCustomerPortalRedirect(
 <a href="/account/billing-portal">Manage billing</a>
 ```
 
-| Situation                   | Response                                                                             |
-| --------------------------- | ------------------------------------------------------------------------------------ |
-| Resolver returns a customer | `302` to the portal URL (carries `#token=...`)                                       |
-| Resolver returns `null`     | `302` to `loginUrl`, or `401 { error: "Unauthorized" }` when `loginUrl` is not set   |
-| Portal link creation fails  | `onError(error, request)` if given, otherwise `502 { error }` with a generic message |
-| Resolver throws             | The error propagates (Next.js answers 500)                                           |
+| Situation                   | Response                                                                                                          |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Resolver returns a customer | `302` to the portal URL (carries `#token=...`)                                                                    |
+| Resolver returns `null`     | `302` to `loginUrl`, or `401 { error: "Unauthorized" }` when `loginUrl` is not set                                |
+| Portal link creation fails  | `onError(error, request)` if given, otherwise one `console.error` line and `502 { error }` with a generic message |
+| Resolver throws             | The error propagates (Next.js answers 500)                                                                        |
 
 Every response the handler builds (all but a custom `onError` one) carries `Cache-Control: no-store` and `Referrer-Policy: no-referrer`, so the tokenized `Location` is neither cached nor forwarded as a Referer.
 
@@ -426,6 +428,8 @@ Every response the handler builds (all but a custom `onError` one) carries `Cach
 - **`buyerIdentity` must be the value you use for authenticated checkout**, so the portal shows the orders placed under it. Whoever controls `buyerIdentity` gets that customer's portal — the resolver is the security boundary.
 - **Environment follows the API Key** in `config`: a test key opens the test portal, a prod key the prod portal. `config.environment` is not used here.
 - **When the portal session expires**, the customer comes back through this route and gets a new link.
+- **Logging is yours to add in `onError`.** Without it, the handler writes one server-side line — `[waffo-pancake] createCustomerPortalRedirect failed: <error message>`, with any `#token=` fragment redacted — and never the error object, the portal URL or the request. Pass `onError` to send failures to your own logger or error tracker, and keep tokens and portal URLs out of what you record.
+- **Do not build `loginUrl` by copying request parameters verbatim.** A string or function that echoes, say, `?next=` from the request into the redirect turns this route into an open redirect. Use constants, or validate against an allow-list of your own paths.
 
 > **Do not build a portal entry on `createCustomerTokenAction`.** It is a generic token primitive that signs whatever `buyerIdentity` it is called with, and a Server Action can be invoked from the browser with arbitrary arguments. Exposed as an unauthenticated portal or sign-in entry, it hands out any customer's token. Use `createCustomerPortalRedirect`, which only takes identity from your resolver.
 
