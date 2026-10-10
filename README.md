@@ -386,6 +386,53 @@ function AccountPage() {
 
 Action hooks return `{ execute, isLoading, error, data }`. Data hooks return `{ data, isLoading, error, refetch }`.
 
+## Customer Portal (SSO)
+
+Send a customer who is signed in to **your** app straight into your store's Pancake customer portal — orders, subscriptions and payments — without the portal's email verification step. `createCustomerPortalRedirect` returns a GET Route Handler; link to it from your UI.
+
+```ts
+// app/account/billing-portal/route.ts
+import { createCustomerPortalRedirect } from "@waffo/pancake-nextjs/server";
+import { auth } from "@/lib/auth"; // your auth library
+
+export const dynamic = "force-dynamic"; // per-visit session check and redirect, never statically cached
+
+export const GET = createCustomerPortalRedirect(
+  { merchantId: process.env.WAFFO_MERCHANT_ID!, privateKey: process.env.WAFFO_PRIVATE_KEY! },
+  {
+    // Identity comes from YOUR session — never from the request's query, body or headers
+    resolveAuthenticatedCustomer: async () => {
+      const session = await auth();
+      if (!session?.user) return null;
+      return { storeId: process.env.WAFFO_STORE_ID!, buyerIdentity: session.user.id };
+    },
+    loginUrl: "/login?returnTo=/account/billing-portal", // omit to answer 401
+  },
+);
+```
+
+```tsx
+<a href="/account/billing-portal">Manage billing</a>
+```
+
+| Situation                   | Response                                                                                                          |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Resolver returns a customer | `302` to the portal URL (carries `#token=...`)                                                                    |
+| Resolver returns `null`     | `302` to `loginUrl`, or `401 { error: "Unauthorized" }` when `loginUrl` is not set                                |
+| Portal link creation fails  | `onError(error, request)` if given, otherwise one `console.error` line and `502 { error }` with a generic message |
+| Resolver throws             | The error propagates (Next.js answers 500)                                                                        |
+
+Every response the handler builds (all but a custom `onError` one) carries `Cache-Control: no-store` and `Referrer-Policy: no-referrer`, so the tokenized `Location` is neither cached nor forwarded as a Referer.
+
+- **Why a Route Handler, not a Server Action**: the portal entry is a plain link navigation. An HTTP redirect keeps the tokenized portal URL out of client JavaScript and lets the response set `no-store` / `no-referrer`; a Server Action would have to hand the URL to the browser to navigate. It follows the same factory shape as `Webhook()`, but lives in `/server` because it holds the private key.
+- **`buyerIdentity` must be the value you use for authenticated checkout**, so the portal shows the orders placed under it. Whoever controls `buyerIdentity` gets that customer's portal — the resolver is the security boundary.
+- **Environment follows the API Key** in `config`: a test key opens the test portal, a prod key the prod portal. `config.environment` is not used here.
+- **When the portal session expires**, the customer comes back through this route and gets a new link.
+- **Logging is yours to add in `onError`.** Without it, the handler writes one server-side line — `[waffo-pancake] createCustomerPortalRedirect failed: <error message>`, with any `#token=` fragment redacted — and never the error object, the portal URL or the request. Pass `onError` to send failures to your own logger or error tracker, and keep tokens and portal URLs out of what you record.
+- **Do not build `loginUrl` by copying request parameters verbatim.** A string or function that echoes, say, `?next=` from the request into the redirect turns this route into an open redirect. Use constants, or validate against an allow-list of your own paths.
+
+> **Do not build a portal entry on `createCustomerTokenAction`.** It is a generic token primitive that signs whatever `buyerIdentity` it is called with, and a Server Action can be invoked from the browser with arbitrary arguments. Exposed as an unauthenticated portal or sign-in entry, it hands out any customer's token. Use `createCustomerPortalRedirect`, which only takes identity from your resolver.
+
 ## Business-Side Identifiers
 
 Attach your own internal references to a checkout or a refund ticket so cross-system reconciliation does not require Waffo IDs. Two flat keys, both optional (max 128 chars):
@@ -459,14 +506,15 @@ All merchant hooks return `{ data, isLoading, error, refetch }`.
 
 ## Server Actions
 
-| Factory                               | Returns                 | Description                                                                                                            |
-| ------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `createCheckoutAction(config)`        | `CheckoutAction`        | Checkout session creation (anonymous + authenticated) and plan change links (`planChange` + `authenticatedPlanChange`) |
-| `createCustomerTokenAction(config)`   | `CustomerTokenAction`   | Customer session token issuance                                                                                        |
-| `createCustomerSessionAction(config)` | `CustomerSessionAction` | Customer self-service operations                                                                                       |
-| `createMerchantQueryAction(config)`   | `MerchantQueryAction`   | Merchant GraphQL queries                                                                                               |
+| Factory                                         | Returns                      | Description                                                                                                                                      |
+| ----------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `createCheckoutAction(config)`                  | `CheckoutAction`             | Checkout session creation (anonymous + authenticated) and plan change links (`planChange` + `authenticatedPlanChange`)                           |
+| `createCustomerTokenAction(config)`             | `CustomerTokenAction`        | Customer session token issuance                                                                                                                  |
+| `createCustomerPortalRedirect(config, options)` | `CustomerPortalRouteHandler` | GET Route Handler: 302 to the customer portal for the customer your session resolver returns — see [Customer Portal (SSO)](#customer-portal-sso) |
+| `createCustomerSessionAction(config)`           | `CustomerSessionAction`      | Customer self-service operations                                                                                                                 |
+| `createMerchantQueryAction(config)`             | `MerchantQueryAction`        | Merchant GraphQL queries                                                                                                                         |
 
-Import from `@waffo/pancake-nextjs/server`. Config requires `merchantId` and `privateKey`.
+Import from `@waffo/pancake-nextjs/server`. Config requires `merchantId` and `privateKey`. `createCustomerTokenAction` signs any `buyerIdentity` it receives: call it only with identity from your own session, never as an unauthenticated portal or sign-in entry.
 
 ## Idempotency
 
@@ -499,7 +547,7 @@ Uniqueness is yours to guarantee (at most 256 characters of letters, numbers, hy
 
 ### Types
 
-Key types: `PriceInfo`, `PriceSnapshot`, `BillingDetail`, `RequestOptions`, `WebhookEvent`, `CheckoutAction`, `CustomerTokenAction`, `CustomerSessionAction`, `MerchantQueryAction`, `CustomerConfig`, `CheckoutButtonProps`, `CheckoutMode`, `CashierLanguage`, `UseCheckoutReturn`, `UseCustomerReturn`, `CustomerActionState<T>`, `QueryState<T>`, `SalesOverview`, `SubscriptionOverview`, `WebhookConfig`.
+Key types: `PriceInfo`, `PriceSnapshot`, `BillingDetail`, `RequestOptions`, `WebhookEvent`, `CheckoutAction`, `CustomerTokenAction`, `CustomerSessionAction`, `MerchantQueryAction`, `CustomerPortalRouteHandler`, `CustomerPortalRedirectOptions`, `AuthenticatedPortalCustomer`, `CustomerConfig`, `CheckoutButtonProps`, `CheckoutMode`, `CashierLanguage`, `UseCheckoutReturn`, `UseCustomerReturn`, `CustomerActionState<T>`, `QueryState<T>`, `SalesOverview`, `SubscriptionOverview`, `WebhookConfig`.
 
 ## Development
 

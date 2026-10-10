@@ -4,6 +4,21 @@ All notable changes to `@waffo/pancake-nextjs` will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-10-10
+
+Customers signed in to a merchant's app can enter the store's customer portal without email verification.
+
+### Added
+
+- **`createCustomerPortalRedirect(config, { resolveAuthenticatedCustomer, loginUrl?, onError? })`** in `@waffo/pancake-nextjs/server` — returns a GET Route Handler. It asks your `resolveAuthenticatedCustomer(request)` for `{ storeId, buyerIdentity }` from your own authenticated session, calls `client.auth.createCustomerPortalLink()` and answers `302` to the tokenized portal URL. A `null` resolver result answers `302` to `loginUrl`, or `401` when it is not set; a failed link creation goes to `onError`, or a generic `502`. Every response the handler builds sets `Cache-Control: no-store` and `Referrer-Policy: no-referrer`. The SDK reads no identity from the request itself.
+- **Default error logging in `createCustomerPortalRedirect`.** Without `onError`, a failed link creation writes one `console.error` line — `[waffo-pancake] createCustomerPortalRedirect failed: <error message>` — before the generic `502`. Only the message is logged, never the error object; a `#token=` fragment is redacted. With `onError` nothing is logged: that is where your own logging goes.
+- **`AuthenticatedPortalCustomer`, `CustomerPortalRedirectOptions`, `CustomerPortalRouteHandler`** types.
+
+### Changed
+
+- **`createCustomerTokenAction` documentation** states that it is a generic token primitive and must not be used as an unauthenticated portal entry. Its behavior is unchanged.
+- **`@waffo/pancake-ts` dependency raised to `^0.26.0`** — the version that adds `auth.createCustomerPortalLink()`. The range also picks up 0.24.0 (webhook amount fields; the six generic amount fields are deprecated, not removed) and 0.25.0 (refund payloads carry what the refunded payment collected); neither is breaking.
+
 ## [0.8.0] - 2026-09-20
 
 Picks up plan change links from `@waffo/pancake-ts` 0.23.0, **and its idempotency change** — see the BREAKING entries under Changed before upgrading.
