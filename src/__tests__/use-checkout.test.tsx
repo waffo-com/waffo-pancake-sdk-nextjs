@@ -77,6 +77,39 @@ describe("useCheckout", () => {
       expect(url.searchParams.get("is_business")).toBe("true");
     });
 
+    it("should send discountCode as discount_code", () => {
+      const { result } = renderHook(() =>
+        useCheckout({
+          type: "link",
+          storeSlug: "my-store",
+          productId: "PROD_xxx",
+          discountCode: "SPRING-20",
+        }),
+      );
+
+      act(() => {
+        result.current.checkout();
+      });
+
+      expect(new URL(window.location.href).searchParams.get("discount_code")).toBe("SPRING-20");
+    });
+
+    it("should omit discount_code when discountCode is not set", () => {
+      const { result } = renderHook(() =>
+        useCheckout({
+          type: "link",
+          storeSlug: "my-store",
+          productId: "PROD_xxx",
+        }),
+      );
+
+      act(() => {
+        result.current.checkout();
+      });
+
+      expect(new URL(window.location.href).searchParams.has("discount_code")).toBe(false);
+    });
+
     it("should open popup in popup mode", () => {
       vi.spyOn(window, "open").mockReturnValue(null);
 

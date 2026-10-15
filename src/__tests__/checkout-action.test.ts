@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { createCheckoutAction, createCustomerSessionAction } from "../server.js";
 
+import type { CheckoutActionParams } from "../server.js";
+
 const anonymousCreate = vi.fn().mockResolvedValue({ sessionId: "cs_anon", checkoutUrl: "https://x/checkout/cs_anon", expiresAt: "z" });
 const authenticatedCreate = vi
   .fn()
@@ -138,6 +140,65 @@ describe("createCustomerSessionAction", () => {
       // @ts-expect-error — not a member of CustomerSessionActionType
       customerAction("customer.jwt", "changePlanWithDiscount", {}),
     ).rejects.toThrow(/Unknown customer action/);
+  });
+});
+
+describe("discount params from the browser", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  /** What a browser can send to the Server Action, bypassing the TypeScript types. */
+  const fromBrowser = (params: Record<string, unknown>) => params as unknown as CheckoutActionParams;
+
+  it("should strip couponId on anonymous and authenticated checkout", async () => {
+    const checkout = createCheckoutAction(CONFIG);
+
+    await checkout(fromBrowser({ productId: "PROD_xxx", currency: "USD", couponId: "CPN_xxx" }));
+    await checkout(
+      fromBrowser({ type: "authenticated", productId: "PROD_xxx", currency: "USD", buyerIdentity: "user-1", couponId: "CPN_xxx" }),
+    );
+
+    expect(anonymousCreate).toHaveBeenCalledWith({ productId: "PROD_xxx", currency: "USD" }, undefined);
+    expect(authenticatedCreate).toHaveBeenCalledWith({ productId: "PROD_xxx", currency: "USD", buyerIdentity: "user-1" }, undefined);
+  });
+
+  it("should strip couponId on plan change flows too", async () => {
+    const checkout = createCheckoutAction(CONFIG);
+    const change = { originOrderId: "ORD_xxx", productId: "PROD_target", currency: "USD", couponId: "CPN_xxx" };
+
+    await checkout(fromBrowser({ type: "planChange", ...change }));
+    await checkout(fromBrowser({ type: "authenticatedPlanChange", buyerIdentity: "user-1", ...change }));
+
+    expect(createPlanChangeSession).toHaveBeenCalledWith(
+      { originOrderId: "ORD_xxx", productId: "PROD_target", currency: "USD" },
+      undefined,
+    );
+    expect(authenticatedPlanChange).toHaveBeenCalledWith(
+      { originOrderId: "ORD_xxx", productId: "PROD_target", currency: "USD", buyerIdentity: "user-1" },
+      undefined,
+    );
+  });
+
+  it("should forward allowPromotionCodes", async () => {
+    const checkout = createCheckoutAction(CONFIG);
+
+    await checkout(fromBrowser({ productId: "PROD_xxx", currency: "USD", allowPromotionCodes: true }));
+    await checkout(
+      fromBrowser({ type: "authenticated", productId: "PROD_xxx", currency: "USD", buyerIdentity: "user-1", allowPromotionCodes: true }),
+    );
+
+    expect(anonymousCreate).toHaveBeenCalledWith({ productId: "PROD_xxx", currency: "USD", allowPromotionCodes: true }, undefined);
+    expect(authenticatedCreate).toHaveBeenCalledWith(
+      { productId: "PROD_xxx", currency: "USD", buyerIdentity: "user-1", allowPromotionCodes: true },
+      undefined,
+    );
+  });
+
+  it("should keep couponId off CheckoutActionParams", () => {
+    // @ts-expect-error — couponId is not part of the server action params
+    const params: CheckoutActionParams = { productId: "PROD_xxx", currency: "USD", couponId: "CPN_xxx" };
+    expect(params).toBeDefined();
   });
 });
 
