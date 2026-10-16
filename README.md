@@ -173,6 +173,8 @@ export async function vipCheckout() {
 }
 ```
 
+Build that call from your own fields — do not spread parameters received from the browser into a server-side call that sets `couponId`. A browser-supplied `allowPromotionCodes` would ride along, and `couponId` together with `allowPromotionCodes` (either value) is rejected locally by the SDK with a 400 before any request is sent.
+
 ### Authenticated Checkout (Recommended)
 
 Creates a session **and** a token bound to the customer you provide. `buyerIdentity` is for order attribution and trial tracking — it is not rendered on the checkout page. To pre-fill the email field on the checkout form, pass `buyerEmail` explicitly.
