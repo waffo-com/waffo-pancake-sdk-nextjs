@@ -45,7 +45,9 @@ export interface LinkCheckoutProps extends CheckoutBaseOptions {
    * Coupon code or promotion code to apply on the product page (sent as `discount_code`).
    * The code is applied and locked: the customer sees the discount but no code entry field,
    * and cannot change or remove it. If the code cannot be used, the checkout page says why.
-   * One-time products only for now.
+   * Works for one-time and subscription products. On a subscription the coupon's duration
+   * decides how many billing periods are discounted; a free trial uses no discount, and it
+   * starts with the first paid period.
    */
   discountCode?: string;
   /**

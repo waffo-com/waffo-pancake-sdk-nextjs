@@ -6,11 +6,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ## [Unreleased]
 
-Customers can use coupon codes and promotion codes at checkout for one-time products.
+Customers can use coupon codes and promotion codes at checkout for one-time products and new subscriptions.
 
 ### Added
 
-- **`LinkCheckoutProps.discountCode` (optional `string`)** — link checkout sends it to the product page as `discount_code`. The code is applied and locked: the customer sees the discount but no code entry field. Without it the product page shows a code entry field.
+- **`LinkCheckoutProps.discountCode` (optional `string`)** — link checkout sends it to the product page as `discount_code`. The code is applied and locked: the customer sees the discount but no code entry field. Without it the product page shows a code entry field. Works for one-time and subscription products; on a subscription the coupon's duration decides how many billing periods are discounted (a free trial uses no discount, and it starts with the first paid period).
 - **`allowPromotionCodes` passes through `createCheckoutAction`** for anonymous and authenticated checkout, showing a code entry field on the checkout page. The typed prop comes with `@waffo/pancake-ts` 0.27.0 (the release that adds `couponId` / `allowPromotionCodes` to `CreateCheckoutSessionParams`); the dependency range is raised to `^0.27.0` when that version is published.
 
 ### Security
