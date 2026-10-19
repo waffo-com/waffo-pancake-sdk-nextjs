@@ -47,7 +47,7 @@ export interface LinkCheckoutProps extends CheckoutBaseOptions {
    * and cannot change or remove it. If the code cannot be used, the checkout page says why.
    * Works for one-time and subscription products. On a subscription the coupon's duration
    * decides how many billing periods are discounted; a free trial uses no discount, and it
-   * starts with the first paid period.
+   * starts with the first paid period. Plan changes do not take discounts.
    */
   discountCode?: string;
   /**
