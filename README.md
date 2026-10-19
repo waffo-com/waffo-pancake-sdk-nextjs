@@ -98,6 +98,14 @@ import { CheckoutButton } from "@waffo/pancake-nextjs";
 </CheckoutButton>
 ```
 
+Add `discountCode` to apply a coupon code or promotion code on the product page, for one-time and subscription products. It is sent as `discount_code`; the code is applied and locked, so the customer sees the discount but cannot change or remove it. Without `discountCode`, the product page shows a code entry field. On a subscription the coupon's duration decides how many billing periods are discounted — a free trial uses no discount, and it starts with the first paid period; a paid trial is discounted and counts as the first period. Plan changes do not take discounts.
+
+```tsx
+<CheckoutButton type="link" storeSlug="my-store" productId="PROD_xxx" currency="USD" discountCode="SPRING-20">
+  Buy Now — 20% off
+</CheckoutButton>
+```
+
 ### Anonymous Checkout
 
 Creates a checkout session via server action, then redirects:
@@ -133,6 +141,39 @@ import { checkout } from "./lib/waffo";
 ```
 
 Pass an optional `orderMerchantExternalId` to attach your internal order reference — see [Business-Side Identifiers](#business-side-identifiers).
+
+#### Discounts
+
+Pass `allowPromotionCodes` to show a code entry field on the checkout page (sessions created through the server action default to no field). The server action forwards it to the platform, which checks every code the customer enters.
+
+```tsx
+<CheckoutButton action={checkout} productId="PROD_xxx" currency="USD" allowPromotionCodes>
+  Buy Now
+</CheckoutButton>
+```
+
+`couponId` cannot be set from the browser. A Server Action is callable with any arguments and `createCheckoutAction` signs with your API Key, so a customer could otherwise apply any of your coupons to their own purchase: the action strips `couponId` on every flow. To apply a coupon the customer cannot change, decide who is entitled to it in your own server code and call `@waffo/pancake-ts` there:
+
+```ts
+// app/actions/vip-checkout.ts
+"use server";
+import { WaffoPancake } from "@waffo/pancake-ts";
+
+const client = new WaffoPancake({ merchantId: process.env.WAFFO_MERCHANT_ID!, privateKey: process.env.WAFFO_PRIVATE_KEY! });
+
+export async function vipCheckout() {
+  const user = await requireVipUser(); // your own session check
+  const { checkoutUrl } = await client.checkout.authenticated.create({
+    productId: "PROD_xxx",
+    currency: "USD",
+    buyerIdentity: user.id,
+    couponId: "CPN_xxx",
+  });
+  return checkoutUrl;
+}
+```
+
+Build that call from your own fields — do not spread parameters received from the browser into a server-side call that sets `couponId`. A browser-supplied `allowPromotionCodes` would ride along, and `couponId` together with `allowPromotionCodes` (either value) is rejected locally by the SDK with a 400 before any request is sent.
 
 ### Authenticated Checkout (Recommended)
 
@@ -506,13 +547,13 @@ All merchant hooks return `{ data, isLoading, error, refetch }`.
 
 ## Server Actions
 
-| Factory                                         | Returns                      | Description                                                                                                                                      |
-| ----------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `createCheckoutAction(config)`                  | `CheckoutAction`             | Checkout session creation (anonymous + authenticated) and plan change links (`planChange` + `authenticatedPlanChange`)                           |
-| `createCustomerTokenAction(config)`             | `CustomerTokenAction`        | Customer session token issuance                                                                                                                  |
-| `createCustomerPortalRedirect(config, options)` | `CustomerPortalRouteHandler` | GET Route Handler: 302 to the customer portal for the customer your session resolver returns — see [Customer Portal (SSO)](#customer-portal-sso) |
-| `createCustomerSessionAction(config)`           | `CustomerSessionAction`      | Customer self-service operations                                                                                                                 |
-| `createMerchantQueryAction(config)`             | `MerchantQueryAction`        | Merchant GraphQL queries                                                                                                                         |
+| Factory                                         | Returns                      | Description                                                                                                                                                     |
+| ----------------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createCheckoutAction(config)`                  | `CheckoutAction`             | Checkout session creation (anonymous + authenticated) and plan change links (`planChange` + `authenticatedPlanChange`); strips `couponId` sent from the browser |
+| `createCustomerTokenAction(config)`             | `CustomerTokenAction`        | Customer session token issuance                                                                                                                                 |
+| `createCustomerPortalRedirect(config, options)` | `CustomerPortalRouteHandler` | GET Route Handler: 302 to the customer portal for the customer your session resolver returns — see [Customer Portal (SSO)](#customer-portal-sso)                |
+| `createCustomerSessionAction(config)`           | `CustomerSessionAction`      | Customer self-service operations                                                                                                                                |
+| `createMerchantQueryAction(config)`             | `MerchantQueryAction`        | Merchant GraphQL queries                                                                                                                                        |
 
 Import from `@waffo/pancake-nextjs/server`. Config requires `merchantId` and `privateKey`. `createCustomerTokenAction` signs any `buyerIdentity` it receives: call it only with identity from your own session, never as an unauthenticated portal or sign-in entry.
 

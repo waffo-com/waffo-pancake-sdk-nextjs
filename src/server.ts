@@ -57,10 +57,12 @@ import type {
  * The `type` field selects the flow: a new purchase (`anonymous` / `authenticated`)
  * or a plan change for an existing subscription (`planChange` /
  * `authenticatedPlanChange`, which carry the required `originOrderId`).
+ *
+ * `couponId` is left off every shape and stripped at runtime — see {@link createCheckoutAction}.
  */
 export type CheckoutActionParams =
-  | ({ type?: "anonymous" } & AnonymousCheckoutParams)
-  | ({ type: "authenticated" } & AuthenticatedCheckoutParams)
+  | ({ type?: "anonymous" } & Omit<AnonymousCheckoutParams, "couponId">)
+  | ({ type: "authenticated" } & Omit<AuthenticatedCheckoutParams, "couponId">)
   | ({ type: "planChange" } & CreatePlanChangeSessionParams)
   | ({ type: "authenticatedPlanChange" } & AuthenticatedPlanChangeParams);
 
@@ -76,11 +78,32 @@ export type CheckoutActionResult = CheckoutSessionResult | AuthenticatedCheckout
 export type CheckoutAction = (params: CheckoutActionParams, options?: RequestOptions) => Promise<CheckoutActionResult>;
 
 /**
+ * Remove `couponId` from parameters that arrived from the browser.
+ *
+ * A Server Action is callable with arbitrary arguments, and this one signs with the
+ * merchant API Key — the credential allowed to apply a coupon. Forwarding a
+ * browser-supplied `couponId` would let a customer apply any coupon of the store to
+ * their own purchase, so it is dropped on every flow.
+ */
+function stripCouponId<T extends object>(params: T): Omit<T, "couponId"> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- drop the browser-supplied coupon
+  const { couponId, ...rest } = params as T & { couponId?: unknown };
+  return rest;
+}
+
+/**
  * Create a server action that handles checkout session creation.
  *
  * The private key is captured in the closure and never sent to the client.
  *
  * Handles both new purchases and plan changes; `params.type` selects the flow.
+ *
+ * `couponId` is always stripped before the request is sent: a Server Action is callable
+ * from the browser with any arguments, and a coupon applied with your API Key cannot be
+ * changed by the customer. To apply a coupon, call `@waffo/pancake-ts`
+ * (`client.checkout.authenticated.create({ ..., couponId })`) from your own server code
+ * after deciding the customer is entitled to it. `allowPromotionCodes` is forwarded — it
+ * only shows the code entry field, and every code is checked by the platform.
  *
  * @param config - WaffoPancake client configuration (merchantId + privateKey)
  * @returns A server action function
@@ -111,7 +134,8 @@ export type CheckoutAction = (params: CheckoutActionParams, options?: RequestOpt
 export function createCheckoutAction(config: WaffoPancakeConfig): CheckoutAction {
   const client = new WaffoPancake(config);
 
-  return async (params: CheckoutActionParams, options?: RequestOptions): Promise<CheckoutActionResult> => {
+  return async (rawParams: CheckoutActionParams, options?: RequestOptions): Promise<CheckoutActionResult> => {
+    const params = stripCouponId(rawParams) as CheckoutActionParams;
     if (params.type === "authenticated") {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars -- remove type field before passing to SDK
       const { type, ...sdkParams } = params;

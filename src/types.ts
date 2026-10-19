@@ -42,28 +42,47 @@ export interface LinkCheckoutProps extends CheckoutBaseOptions {
   /** Is business purchase */
   isBusiness?: boolean;
   /**
+   * Coupon code or promotion code to apply on the product page (sent as `discount_code`).
+   * The code is applied and locked: the customer sees the discount but no code entry field,
+   * and cannot change or remove it. If the code cannot be used, the checkout page says why.
+   * Works for one-time and subscription products. On a subscription the coupon's duration
+   * decides how many billing periods are discounted; a free trial uses no discount, and it
+   * starts with the first paid period. Plan changes do not take discounts.
+   */
+  discountCode?: string;
+  /**
    * Base URL of the storefront. Default: `"https://pancake.waffo.ai"`
    */
   baseUrl?: string;
 }
 
-/** Anonymous checkout — creates session via server action */
+/**
+ * Anonymous checkout — creates session via server action.
+ *
+ * `couponId` is not accepted: the server action strips it, because anything the browser sends
+ * would be applied with your API Key. Set `allowPromotionCodes` to let the customer enter a code,
+ * or apply a coupon from your own server code with `@waffo/pancake-ts`.
+ */
 export type AnonymousCheckoutProps = CheckoutBaseOptions & {
   type?: "anonymous";
   /** Server action created by `createCheckoutAction()` */
   action: CheckoutAction;
   /** Callback fired when checkout session is successfully created */
   onSuccess?: (result: CheckoutSessionResult) => void;
-} & AnonymousCheckoutParams;
+} & Omit<AnonymousCheckoutParams, "couponId">;
 
-/** Authenticated checkout — creates session + token via server action */
+/**
+ * Authenticated checkout — creates session + token via server action.
+ *
+ * `couponId` is not accepted, for the same reason as on {@link AnonymousCheckoutProps}.
+ */
 export type AuthenticatedCheckoutProps = CheckoutBaseOptions & {
   type: "authenticated";
   /** Server action created by `createCheckoutAction()` */
   action: CheckoutAction;
   /** Callback fired when checkout session is successfully created */
   onSuccess?: (result: AuthenticatedCheckoutResult) => void;
-} & AuthenticatedCheckoutParams;
+} & Omit<AuthenticatedCheckoutParams, "couponId">;
 
 /** Union of all checkout prop types */
 export type CheckoutProps = LinkCheckoutProps | AnonymousCheckoutProps | AuthenticatedCheckoutProps;
