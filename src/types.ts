@@ -48,7 +48,7 @@ export interface LinkCheckoutProps extends CheckoutBaseOptions {
    * Works for one-time and subscription products. On a subscription the coupon's duration
    * decides how many billing periods are discounted; a free trial uses no discount, and it
    * starts with the first paid period. A product link never starts a plan change; for how
-   * discounts behave on one, see https://docs.waffo.ai/guides/discounts#subscriptions.
+   * discounts behave on one, see https://docs.waffo.ai/guides/discounts#plan-changes.
    */
   discountCode?: string;
   /**
