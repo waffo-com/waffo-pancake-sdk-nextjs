@@ -52,19 +52,26 @@ import type {
 // ============================================================
 
 /**
+ * Discount fields only the merchant may set: they are applied with the API Key, so the
+ * checkout server action never accepts them from the browser.
+ */
+type MerchantOnlyDiscountField = "couponId" | "promotionCode";
+
+/**
  * Parameters for the checkout server action.
  *
  * The `type` field selects the flow: a new purchase (`anonymous` / `authenticated`)
  * or a plan change for an existing subscription (`planChange` /
  * `authenticatedPlanChange`, which carry the required `originOrderId`).
  *
- * `couponId` is left off every shape and stripped at runtime — see {@link createCheckoutAction}.
+ * `couponId` and `promotionCode` are left off every shape and stripped at runtime — see
+ * {@link createCheckoutAction}.
  */
 export type CheckoutActionParams =
-  | ({ type?: "anonymous" } & Omit<AnonymousCheckoutParams, "couponId">)
-  | ({ type: "authenticated" } & Omit<AuthenticatedCheckoutParams, "couponId">)
-  | ({ type: "planChange" } & CreatePlanChangeSessionParams)
-  | ({ type: "authenticatedPlanChange" } & AuthenticatedPlanChangeParams);
+  | ({ type?: "anonymous" } & Omit<AnonymousCheckoutParams, MerchantOnlyDiscountField>)
+  | ({ type: "authenticated" } & Omit<AuthenticatedCheckoutParams, MerchantOnlyDiscountField>)
+  | ({ type: "planChange" } & Omit<CreatePlanChangeSessionParams, MerchantOnlyDiscountField>)
+  | ({ type: "authenticatedPlanChange" } & Omit<AuthenticatedPlanChangeParams, MerchantOnlyDiscountField>);
 
 /** Result of the checkout server action */
 export type CheckoutActionResult = CheckoutSessionResult | AuthenticatedCheckoutResult;
@@ -78,16 +85,18 @@ export type CheckoutActionResult = CheckoutSessionResult | AuthenticatedCheckout
 export type CheckoutAction = (params: CheckoutActionParams, options?: RequestOptions) => Promise<CheckoutActionResult>;
 
 /**
- * Remove `couponId` from parameters that arrived from the browser.
+ * Remove `couponId` and `promotionCode` from parameters that arrived from the browser.
  *
  * A Server Action is callable with arbitrary arguments, and this one signs with the
- * merchant API Key — the credential allowed to apply a coupon. Forwarding a
- * browser-supplied `couponId` would let a customer apply any coupon of the store to
- * their own purchase, so it is dropped on every flow.
+ * merchant API Key — the credential allowed to apply a coupon or prefill a promotion
+ * code. Forwarding a browser-supplied `couponId` would let a customer apply any coupon
+ * of the store to their own purchase, and a browser-supplied `promotionCode` would be
+ * applied as a merchant-chosen code (locked unless `allowPromotionCodes` is on), so both
+ * are dropped on every flow, new purchase and plan change alike.
  */
-function stripCouponId<T extends object>(params: T): Omit<T, "couponId"> {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- drop the browser-supplied coupon
-  const { couponId, ...rest } = params as T & { couponId?: unknown };
+function stripMerchantOnlyDiscount<T extends object>(params: T): Omit<T, MerchantOnlyDiscountField> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- drop the browser-supplied coupon and promotion code
+  const { couponId, promotionCode, ...rest } = params as T & { couponId?: unknown; promotionCode?: unknown };
   return rest;
 }
 
@@ -98,12 +107,14 @@ function stripCouponId<T extends object>(params: T): Omit<T, "couponId"> {
  *
  * Handles both new purchases and plan changes; `params.type` selects the flow.
  *
- * `couponId` is always stripped before the request is sent: a Server Action is callable
- * from the browser with any arguments, and a coupon applied with your API Key cannot be
- * changed by the customer. To apply a coupon, call `@waffo/pancake-ts`
- * (`client.checkout.authenticated.create({ ..., couponId })`) from your own server code
- * after deciding the customer is entitled to it. `allowPromotionCodes` is forwarded — it
- * only shows the code entry field, and every code is checked by the platform.
+ * `couponId` and `promotionCode` are always stripped before the request is sent, on
+ * new purchases and plan changes: a Server Action is callable from the browser with any
+ * arguments, and a coupon or promotion code set with your API Key is applied as your
+ * choice. To apply one, call `@waffo/pancake-ts`
+ * (`client.checkout.authenticated.create({ ..., couponId })`, or `promotionCode`, or the
+ * plan change methods) from your own server code after deciding the customer is entitled
+ * to it. `allowPromotionCodes` is forwarded — it only shows the code entry field, and
+ * every code is checked by the platform.
  *
  * @param config - WaffoPancake client configuration (merchantId + privateKey)
  * @returns A server action function
@@ -135,7 +146,7 @@ export function createCheckoutAction(config: WaffoPancakeConfig): CheckoutAction
   const client = new WaffoPancake(config);
 
   return async (rawParams: CheckoutActionParams, options?: RequestOptions): Promise<CheckoutActionResult> => {
-    const params = stripCouponId(rawParams) as CheckoutActionParams;
+    const params = stripMerchantOnlyDiscount(rawParams) as CheckoutActionParams;
     if (params.type === "authenticated") {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars -- remove type field before passing to SDK
       const { type, ...sdkParams } = params;

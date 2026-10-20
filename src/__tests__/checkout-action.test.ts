@@ -195,10 +195,57 @@ describe("discount params from the browser", () => {
     );
   });
 
-  it("should keep couponId off CheckoutActionParams", () => {
+  it("should strip promotionCode on anonymous and authenticated checkout", async () => {
+    const checkout = createCheckoutAction(CONFIG);
+
+    await checkout(fromBrowser({ productId: "PROD_xxx", currency: "USD", promotionCode: "SPRING-20", allowPromotionCodes: true }));
+    await checkout(
+      fromBrowser({ type: "authenticated", productId: "PROD_xxx", currency: "USD", buyerIdentity: "user-1", promotionCode: "SPRING-20" }),
+    );
+
+    // allowPromotionCodes still rides along — only the merchant-chosen code is dropped
+    expect(anonymousCreate).toHaveBeenCalledWith({ productId: "PROD_xxx", currency: "USD", allowPromotionCodes: true }, undefined);
+    expect(authenticatedCreate).toHaveBeenCalledWith({ productId: "PROD_xxx", currency: "USD", buyerIdentity: "user-1" }, undefined);
+  });
+
+  it("should strip promotionCode and couponId on plan change flows, forwarding allowPromotionCodes", async () => {
+    const checkout = createCheckoutAction(CONFIG);
+    const change = {
+      originOrderId: "ORD_xxx",
+      productId: "PROD_target",
+      currency: "USD",
+      couponId: "CPN_xxx",
+      promotionCode: "SPRING-20",
+      allowPromotionCodes: true,
+    };
+
+    await checkout(fromBrowser({ type: "planChange", ...change }));
+    await checkout(fromBrowser({ type: "authenticatedPlanChange", buyerIdentity: "user-1", ...change }));
+
+    expect(createPlanChangeSession).toHaveBeenCalledWith(
+      { originOrderId: "ORD_xxx", productId: "PROD_target", currency: "USD", allowPromotionCodes: true },
+      undefined,
+    );
+    expect(authenticatedPlanChange).toHaveBeenCalledWith(
+      { originOrderId: "ORD_xxx", productId: "PROD_target", currency: "USD", buyerIdentity: "user-1", allowPromotionCodes: true },
+      undefined,
+    );
+  });
+
+  it("should keep couponId and promotionCode off CheckoutActionParams", () => {
     // @ts-expect-error — couponId is not part of the server action params
     const params: CheckoutActionParams = { productId: "PROD_xxx", currency: "USD", couponId: "CPN_xxx" };
-    expect(params).toBeDefined();
+    // @ts-expect-error — promotionCode is not part of the server action params
+    const withCode: CheckoutActionParams = { productId: "PROD_xxx", currency: "USD", promotionCode: "SPRING-20" };
+    const change: CheckoutActionParams = {
+      type: "planChange",
+      originOrderId: "ORD_xxx",
+      productId: "PROD_target",
+      currency: "USD",
+      // @ts-expect-error — couponId is not part of the plan change server action params
+      couponId: "CPN_xxx",
+    };
+    expect([params, withCode, change]).toHaveLength(3);
   });
 });
 

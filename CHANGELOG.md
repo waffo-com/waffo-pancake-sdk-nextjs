@@ -6,17 +6,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ## [Unreleased]
 
-Customers can use coupon codes and promotion codes at checkout for one-time products and new subscriptions.
+Customers can use coupon codes and promotion codes at checkout for one-time products, new subscriptions and plan changes.
 
 ### Added
 
 - **`LinkCheckoutProps.discountCode` (optional `string`)** — link checkout sends it to the product page as `discount_code`. The code is applied and locked: the customer sees the discount but no code entry field. Without it the product page shows a code entry field. Works for one-time and subscription products; on a subscription the coupon's duration decides how many billing periods are discounted (a free trial uses no discount, and it starts with the first paid period).
 - **`allowPromotionCodes` passes through `createCheckoutAction`** for anonymous and authenticated checkout, showing a code entry field on the checkout page. The typed prop comes with `@waffo/pancake-ts` 0.27.0 (the release that adds `couponId` / `allowPromotionCodes` to `CreateCheckoutSessionParams`); the dependency range is raised to `^0.27.0` when that version is published.
+- **`allowPromotionCodes` passes through `createCheckoutAction` on plan changes** (`planChange` / `authenticatedPlanChange`), showing a code entry field on the change confirmation page. A code the customer enters replaces the subscription's current discount; without one, the current discount carries over to the new plan while it still applies — see [Discounts](https://docs.waffo.ai/guides/discounts#subscriptions). Typed with `@waffo/pancake-ts` 0.27.0, like the new-purchase prop.
 - **`listTotal` / `discountAmount` on webhook amount blocks** — `event.data.listPrice` (payment events) and `event.data.originalPayment` (refund events) in `Webhook()` handlers are typed with the price before the discount and the tax-inclusive discount, read as `listTotal - discountAmount = total`. No code change in this package: the fields come with the `WebhookEventData` re-exported from `@waffo/pancake-ts` 0.27.0, and appear once the dependency range is raised to `^0.27.0`.
 
 ### Security
 
-- **`createCheckoutAction` strips `couponId` on every flow.** A Server Action is callable from the browser with any arguments and this one signs with your API Key, the credential allowed to apply a coupon — forwarding `couponId` would let a customer apply any of your coupons to their own purchase. `couponId` is also left off `AnonymousCheckoutProps`, `AuthenticatedCheckoutProps` and `CheckoutActionParams`. To apply a coupon, call `@waffo/pancake-ts` from your own server code after checking that the customer is entitled to it.
+- **`createCheckoutAction` strips `couponId` and `promotionCode` on every flow, plan changes included.** A Server Action is callable from the browser with any arguments and this one signs with your API Key, the credential allowed to apply a coupon or prefill a promotion code — forwarding them would let a customer apply any of your coupons, or prefill any promotion code as if you had chosen it, on their own purchase or plan change. Both are also left off `AnonymousCheckoutProps`, `AuthenticatedCheckoutProps` and every shape of `CheckoutActionParams`. To apply a coupon or prefill a code, call `@waffo/pancake-ts` from your own server code after checking that the customer is entitled to it.
 
 ## [0.9.0] - 2026-10-10
 
