@@ -42,7 +42,7 @@ export interface LinkCheckoutProps extends CheckoutBaseOptions {
   /** Is business purchase */
   isBusiness?: boolean;
   /**
-   * Promotion code to apply on the product page (sent as `discount_code`).
+   * Coupon code or promotion code to apply on the product page (sent as `discount_code`).
    * The code is applied and locked: the customer sees the discount but no code entry field,
    * and cannot change or remove it. If the code cannot be used, the checkout page says why.
    * Works for one-time and subscription products. On a subscription the coupon's duration
