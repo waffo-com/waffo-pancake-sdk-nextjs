@@ -6,7 +6,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ## [Unreleased]
 
-Customers can use coupon codes and promotion codes at checkout for one-time products, new subscriptions and plan changes.
+Customers can use promotion codes at checkout for one-time products, new subscriptions and plan changes.
 
 ### Added
 

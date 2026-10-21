@@ -98,7 +98,7 @@ import { CheckoutButton } from "@waffo/pancake-nextjs";
 </CheckoutButton>
 ```
 
-Add `discountCode` to apply a coupon code or promotion code on the product page, for one-time and subscription products. It is sent as `discount_code`; the code is applied and locked, so the customer sees the discount but cannot change or remove it. Without `discountCode`, the product page shows a code entry field. On a subscription the coupon's duration decides how many billing periods are discounted — a free trial uses no discount, and it starts with the first paid period; a paid trial is discounted and counts as the first period. A product link never starts a plan change; for discounts on plan changes, see [Plan Change Links](#plan-change-links).
+Add `discountCode` to apply a promotion code on the product page, for one-time and subscription products. It is sent as `discount_code`; the code is applied and locked, so the customer sees the discount but cannot change or remove it. Without `discountCode`, the product page shows a code entry field. On a subscription the coupon's duration decides how many billing periods are discounted — a free trial uses no discount, and it starts with the first paid period; a paid trial is discounted and counts as the first period. A product link never starts a plan change; for discounts on plan changes, see [Plan Change Links](#plan-change-links).
 
 ```tsx
 <CheckoutButton type="link" storeSlug="my-store" productId="PROD_xxx" currency="USD" discountCode="SPRING-20">
