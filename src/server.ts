@@ -52,17 +52,52 @@ import type {
 // ============================================================
 
 /**
+ * Checkout fields only the merchant may set: the server action signs with the API Key, so
+ * whatever it forwards is applied as the merchant's own choice — a coupon or prefilled
+ * promotion code (`couponId`, `promotionCode`), a custom price (`priceSnapshot`), the trial
+ * decision (`withTrial`) and the plan change amount (`changeAmount`, `changeCreditAmount`).
+ * The checkout server action never accepts them from the browser.
+ */
+export type MerchantOnlyCheckoutField =
+  | "couponId"
+  | "promotionCode"
+  | "priceSnapshot"
+  | "withTrial"
+  | "changeAmount"
+  | "changeCreditAmount";
+
+/**
+ * `T` without the {@link MerchantOnlyCheckoutField} fields, each re-declared as `never` so that
+ * passing one is a compile error rather than a silently dropped value.
+ *
+ * @example
+ * ```ts
+ * type Params = WithoutMerchantOnlyFields<AnonymousCheckoutParams>;
+ * const ok: Params = { productId: "PROD_xxx", currency: "USD", allowPromotionCodes: true };
+ * // @ts-expect-error — priceSnapshot is merchant-only
+ * const bad: Params = { productId: "PROD_xxx", currency: "USD", priceSnapshot: { amount: "1.00", taxCategory: "saas" } };
+ * ```
+ */
+export type WithoutMerchantOnlyFields<T> = Omit<T, MerchantOnlyCheckoutField> & {
+  [K in MerchantOnlyCheckoutField]?: never;
+};
+
+/**
  * Parameters for the checkout server action.
  *
  * The `type` field selects the flow: a new purchase (`anonymous` / `authenticated`)
  * or a plan change for an existing subscription (`planChange` /
  * `authenticatedPlanChange`, which carry the required `originOrderId`).
+ *
+ * The {@link MerchantOnlyCheckoutField} fields (`couponId`, `promotionCode`, `priceSnapshot`,
+ * `withTrial`, `changeAmount`, `changeCreditAmount`) are typed `never` on every shape and
+ * stripped at runtime — see {@link createCheckoutAction}.
  */
 export type CheckoutActionParams =
-  | ({ type?: "anonymous" } & AnonymousCheckoutParams)
-  | ({ type: "authenticated" } & AuthenticatedCheckoutParams)
-  | ({ type: "planChange" } & CreatePlanChangeSessionParams)
-  | ({ type: "authenticatedPlanChange" } & AuthenticatedPlanChangeParams);
+  | ({ type?: "anonymous" } & WithoutMerchantOnlyFields<AnonymousCheckoutParams>)
+  | ({ type: "authenticated" } & WithoutMerchantOnlyFields<AuthenticatedCheckoutParams>)
+  | ({ type: "planChange" } & WithoutMerchantOnlyFields<CreatePlanChangeSessionParams>)
+  | ({ type: "authenticatedPlanChange" } & WithoutMerchantOnlyFields<AuthenticatedPlanChangeParams>);
 
 /** Result of the checkout server action */
 export type CheckoutActionResult = CheckoutSessionResult | AuthenticatedCheckoutResult;
@@ -76,11 +111,62 @@ export type CheckoutActionResult = CheckoutSessionResult | AuthenticatedCheckout
 export type CheckoutAction = (params: CheckoutActionParams, options?: RequestOptions) => Promise<CheckoutActionResult>;
 
 /**
+ * Remove every {@link MerchantOnlyCheckoutField} from parameters that arrived from the browser.
+ *
+ * Behavior:
+ * - Drops `couponId`, `promotionCode`, `priceSnapshot`, `withTrial`, `changeAmount` and
+ *   `changeCreditAmount`; every other field (`allowPromotionCodes` included) is kept.
+ *
+ * Side effects:
+ * - None: returns a shallow copy, the input is not modified.
+ *
+ * Edge cases:
+ * - Applied on every flow, new purchase and plan change alike. A Server Action is callable
+ *   with arbitrary arguments and this one signs with the merchant API Key, so a forwarded
+ *   field would be honored as the merchant's choice: any coupon of the store, a prefilled
+ *   code, a price of the customer's choosing, a skipped trial check, or a plan change
+ *   charge or credit the customer picked.
+ *
+ * @param params - Parameters as received by the server action
+ * @returns The parameters without the merchant-only fields
+ *
+ * @example
+ * ```ts
+ * stripMerchantOnlyFields({ productId: "PROD_xxx", currency: "USD", priceSnapshot: { amount: "0.01", taxCategory: "saas" } });
+ * // => { productId: "PROD_xxx", currency: "USD" }
+ * ```
+ */
+function stripMerchantOnlyFields<T extends object>(params: T): Omit<T, MerchantOnlyCheckoutField> {
+  const {
+    /* eslint-disable @typescript-eslint/no-unused-vars -- drop the browser-supplied merchant-only fields */
+    couponId,
+    promotionCode,
+    priceSnapshot,
+    withTrial,
+    changeAmount,
+    changeCreditAmount,
+    /* eslint-enable @typescript-eslint/no-unused-vars */
+    ...rest
+  } = params as T & Partial<Record<MerchantOnlyCheckoutField, unknown>>;
+  return rest;
+}
+
+/**
  * Create a server action that handles checkout session creation.
  *
  * The private key is captured in the closure and never sent to the client.
  *
  * Handles both new purchases and plan changes; `params.type` selects the flow.
+ *
+ * `couponId`, `promotionCode`, `priceSnapshot`, `withTrial`, `changeAmount` and
+ * `changeCreditAmount` are always stripped before the request is sent, on new purchases
+ * and plan changes: a Server Action is callable from the browser with any arguments, and
+ * whatever is sent with your API Key is applied as your choice. To set any of them, call
+ * `@waffo/pancake-ts` (`client.checkout.authenticated.create({ ..., couponId })`,
+ * `client.checkout.anonymous.create({ ..., priceSnapshot })`,
+ * `client.checkout.createPlanChangeSession({ ..., changeCreditAmount })`, …) from your own
+ * server code after deciding the customer is entitled to it. `allowPromotionCodes` is
+ * forwarded — it only shows the code entry field, and every code is checked by the platform.
  *
  * @param config - WaffoPancake client configuration (merchantId + privateKey)
  * @returns A server action function
@@ -111,7 +197,8 @@ export type CheckoutAction = (params: CheckoutActionParams, options?: RequestOpt
 export function createCheckoutAction(config: WaffoPancakeConfig): CheckoutAction {
   const client = new WaffoPancake(config);
 
-  return async (params: CheckoutActionParams, options?: RequestOptions): Promise<CheckoutActionResult> => {
+  return async (rawParams: CheckoutActionParams, options?: RequestOptions): Promise<CheckoutActionResult> => {
+    const params = stripMerchantOnlyFields(rawParams) as CheckoutActionParams;
     if (params.type === "authenticated") {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars -- remove type field before passing to SDK
       const { type, ...sdkParams } = params;

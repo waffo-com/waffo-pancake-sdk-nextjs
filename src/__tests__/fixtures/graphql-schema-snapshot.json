@@ -1,0 +1,1388 @@
+{
+  "source": "waffo-pancake-graphql-service@ba5f893 (branch coupon-plan-change), printSchema(getSchemaForRole(role)) trimmed to the types the SDK data hook queries touch",
+  "roles": {
+    "customer": {
+      "types": {
+        "Money": {
+          "kind": "OBJECT",
+          "fields": {
+            "amount": {
+              "type": "String!",
+              "args": {}
+            },
+            "currency": {
+              "type": "String!",
+              "args": {}
+            },
+            "display": {
+              "type": "String!",
+              "args": {}
+            }
+          }
+        },
+        "OnetimeOrder": {
+          "kind": "OBJECT",
+          "fields": {
+            "billingDetail": {
+              "type": "BillingDetail!",
+              "args": {}
+            },
+            "buyerEmail": {
+              "type": "String!",
+              "args": {}
+            },
+            "buyerIp": {
+              "type": "String!",
+              "args": {}
+            },
+            "createdAt": {
+              "type": "String!",
+              "args": {}
+            },
+            "currency": {
+              "type": "String!",
+              "args": {}
+            },
+            "discount": {
+              "type": "DiscountApplication",
+              "args": {}
+            },
+            "discountAmount": {
+              "type": "Money",
+              "args": {}
+            },
+            "id": {
+              "type": "String!",
+              "args": {}
+            },
+            "listTotal": {
+              "type": "Money",
+              "args": {}
+            },
+            "merchantProvidedBuyerIdentity": {
+              "type": "String!",
+              "args": {}
+            },
+            "onetimeProduct": {
+              "type": "OnetimeProduct",
+              "args": {}
+            },
+            "orderMerchantExternalId": {
+              "type": "String",
+              "args": {}
+            },
+            "payments": {
+              "type": "[Payment!]!",
+              "args": {}
+            },
+            "priceSnapshot": {
+              "type": "OnetimePriceSnapshot",
+              "args": {}
+            },
+            "productVersion": {
+              "type": "OnetimeProductVersion",
+              "args": {}
+            },
+            "productVersionId": {
+              "type": "String",
+              "args": {}
+            },
+            "status": {
+              "type": "OnetimeOrderStatus!",
+              "args": {}
+            },
+            "store": {
+              "type": "Store",
+              "args": {}
+            },
+            "storeId": {
+              "type": "String!",
+              "args": {}
+            },
+            "subtotal": {
+              "type": "Money",
+              "args": {}
+            },
+            "taxAmount": {
+              "type": "Money",
+              "args": {}
+            },
+            "testMode": {
+              "type": "Boolean!",
+              "args": {}
+            },
+            "total": {
+              "type": "Money",
+              "args": {}
+            },
+            "updatedAt": {
+              "type": "String!",
+              "args": {}
+            }
+          }
+        },
+        "OnetimeProductVersion": {
+          "kind": "OBJECT",
+          "fields": {
+            "createdAt": {
+              "type": "String!",
+              "args": {}
+            },
+            "description": {
+              "type": "String",
+              "args": {}
+            },
+            "id": {
+              "type": "String!",
+              "args": {}
+            },
+            "isProdVersion": {
+              "type": "Boolean!",
+              "args": {}
+            },
+            "isTestVersion": {
+              "type": "Boolean!",
+              "args": {}
+            },
+            "media": {
+              "type": "[MediaItem!]!",
+              "args": {}
+            },
+            "metadata": {
+              "type": "String!",
+              "args": {}
+            },
+            "name": {
+              "type": "String!",
+              "args": {}
+            },
+            "prices": {
+              "type": "[CurrencyPrice!]!",
+              "args": {}
+            },
+            "productId": {
+              "type": "String!",
+              "args": {}
+            },
+            "successUrl": {
+              "type": "String",
+              "args": {}
+            },
+            "versionNumber": {
+              "type": "Int!",
+              "args": {}
+            }
+          }
+        },
+        "Payment": {
+          "kind": "OBJECT",
+          "fields": {
+            "amount": {
+              "type": "Money!",
+              "args": {}
+            },
+            "cardInfo": {
+              "type": "CardInfo",
+              "args": {}
+            },
+            "createdAt": {
+              "type": "String!",
+              "args": {}
+            },
+            "failureReason": {
+              "type": "String",
+              "args": {}
+            },
+            "id": {
+              "type": "String!",
+              "args": {}
+            },
+            "isFullyRefunded": {
+              "type": "Boolean!",
+              "args": {}
+            },
+            "onetimeOrder": {
+              "type": "OnetimeOrder",
+              "args": {}
+            },
+            "orderId": {
+              "type": "String!",
+              "args": {}
+            },
+            "paymentMethod": {
+              "type": "PaymentMethod",
+              "args": {}
+            },
+            "paymentMethodDetails": {
+              "type": "String",
+              "args": {}
+            },
+            "periodNumber": {
+              "type": "Int",
+              "args": {}
+            },
+            "pspPaymentId": {
+              "type": "String",
+              "args": {}
+            },
+            "refundedAmount": {
+              "type": "Money!",
+              "args": {}
+            },
+            "refunds": {
+              "type": "[Refund!]!",
+              "args": {}
+            },
+            "refundStatus": {
+              "type": "PaymentRefundStatus!",
+              "args": {}
+            },
+            "snapshotAmountDetails": {
+              "type": "SnapshotAmountDetails!",
+              "args": {}
+            },
+            "status": {
+              "type": "PaymentStatus!",
+              "args": {}
+            },
+            "subscriptionOrder": {
+              "type": "SubscriptionOrder",
+              "args": {}
+            },
+            "testMode": {
+              "type": "Boolean!",
+              "args": {}
+            }
+          }
+        },
+        "Query": {
+          "kind": "OBJECT",
+          "fields": {
+            "onetimeOrders": {
+              "type": "[OnetimeOrder!]!",
+              "args": {
+                "storeId": "String",
+                "storeSlug": "String",
+                "limit": "Int",
+                "offset": "Int",
+                "filter": "OnetimeOrderFilter",
+                "orderBy": "[OnetimeOrderOrderBy!]"
+              }
+            },
+            "payments": {
+              "type": "[Payment!]!",
+              "args": {
+                "storeId": "String",
+                "limit": "Int",
+                "offset": "Int",
+                "filter": "PaymentFilter",
+                "orderBy": "[PaymentOrderBy!]"
+              }
+            },
+            "refundTickets": {
+              "type": "[RefundTicket!]!",
+              "args": {
+                "limit": "Int",
+                "offset": "Int",
+                "filter": "RefundTicketFilter",
+                "orderBy": "[RefundTicketOrderBy!]"
+              }
+            },
+            "subscriptionOrders": {
+              "type": "[SubscriptionOrder!]!",
+              "args": {
+                "storeId": "String",
+                "storeSlug": "String",
+                "limit": "Int",
+                "offset": "Int",
+                "filter": "SubscriptionOrderFilter",
+                "orderBy": "[SubscriptionOrderOrderBy!]"
+              }
+            }
+          }
+        },
+        "RefundTicket": {
+          "kind": "OBJECT",
+          "fields": {
+            "createdAt": {
+              "type": "String!",
+              "args": {}
+            },
+            "currentVersionId": {
+              "type": "String",
+              "args": {}
+            },
+            "executedAt": {
+              "type": "String",
+              "args": {}
+            },
+            "id": {
+              "type": "String!",
+              "args": {}
+            },
+            "metadata": {
+              "type": "String",
+              "args": {}
+            },
+            "rejectReason": {
+              "type": "String",
+              "args": {}
+            },
+            "reviewedAt": {
+              "type": "String",
+              "args": {}
+            },
+            "status": {
+              "type": "RefundTicketStatus!",
+              "args": {}
+            },
+            "subjectId": {
+              "type": "String!",
+              "args": {}
+            },
+            "submitterId": {
+              "type": "String!",
+              "args": {}
+            },
+            "submitterType": {
+              "type": "String!",
+              "args": {}
+            },
+            "updatedAt": {
+              "type": "String!",
+              "args": {}
+            },
+            "versionData": {
+              "type": "RefundTicketVersionData",
+              "args": {}
+            },
+            "versionNumber": {
+              "type": "Int",
+              "args": {}
+            },
+            "versions": {
+              "type": "[RefundTicketVersion!]!",
+              "args": {}
+            }
+          }
+        },
+        "RefundTicketVersionData": {
+          "kind": "OBJECT",
+          "fields": {
+            "reason": {
+              "type": "String!",
+              "args": {}
+            },
+            "requestedAmount": {
+              "type": "RequestedAmountDetails",
+              "args": {}
+            }
+          }
+        },
+        "RequestedAmountDetails": {
+          "kind": "OBJECT",
+          "fields": {
+            "amount": {
+              "type": "String!",
+              "args": {}
+            },
+            "currency": {
+              "type": "String!",
+              "args": {}
+            }
+          }
+        },
+        "SubscriptionOrder": {
+          "kind": "OBJECT",
+          "fields": {
+            "activateAt": {
+              "type": "String",
+              "args": {}
+            },
+            "activeDiscount": {
+              "type": "SubscriptionActiveDiscount",
+              "args": {}
+            },
+            "billingDetail": {
+              "type": "BillingDetail!",
+              "args": {}
+            },
+            "billingPeriod": {
+              "type": "String",
+              "args": {}
+            },
+            "buyerEmail": {
+              "type": "String!",
+              "args": {}
+            },
+            "buyerIp": {
+              "type": "String!",
+              "args": {}
+            },
+            "canceledAt": {
+              "type": "String",
+              "args": {}
+            },
+            "cancelInitiator": {
+              "type": "CancelInitiator",
+              "args": {}
+            },
+            "canReactivate": {
+              "type": "Boolean!",
+              "args": {}
+            },
+            "changeOriginOrderId": {
+              "type": "String",
+              "args": {}
+            },
+            "createdAt": {
+              "type": "String!",
+              "args": {}
+            },
+            "currency": {
+              "type": "String!",
+              "args": {}
+            },
+            "currentPeriod": {
+              "type": "SubscriptionPeriod",
+              "args": {}
+            },
+            "currentPeriodEnd": {
+              "type": "String",
+              "args": {}
+            },
+            "currentPeriodNumber": {
+              "type": "Int",
+              "args": {}
+            },
+            "currentPeriodStart": {
+              "type": "String",
+              "args": {}
+            },
+            "discount": {
+              "type": "DiscountApplication",
+              "args": {}
+            },
+            "id": {
+              "type": "String!",
+              "args": {}
+            },
+            "isInTrial": {
+              "type": "Boolean!",
+              "args": {}
+            },
+            "merchantProvidedBuyerIdentity": {
+              "type": "String!",
+              "args": {}
+            },
+            "orderMerchantExternalId": {
+              "type": "String",
+              "args": {}
+            },
+            "payments": {
+              "type": "[Payment!]!",
+              "args": {}
+            },
+            "priceSnapshot": {
+              "type": "SubscriptionPriceSnapshot",
+              "args": {}
+            },
+            "productVersion": {
+              "type": "SubscriptionProductVersion",
+              "args": {}
+            },
+            "productVersionId": {
+              "type": "String",
+              "args": {}
+            },
+            "pspSubscriptionId": {
+              "type": "String",
+              "args": {}
+            },
+            "status": {
+              "type": "SubscriptionOrderStatus!",
+              "args": {}
+            },
+            "store": {
+              "type": "Store",
+              "args": {}
+            },
+            "storeId": {
+              "type": "String!",
+              "args": {}
+            },
+            "subscriptionProduct": {
+              "type": "SubscriptionProduct",
+              "args": {}
+            },
+            "supersededByOrderId": {
+              "type": "String",
+              "args": {}
+            },
+            "testMode": {
+              "type": "Boolean!",
+              "args": {}
+            },
+            "updatedAt": {
+              "type": "String!",
+              "args": {}
+            },
+            "willRenew": {
+              "type": "Boolean!",
+              "args": {}
+            }
+          }
+        },
+        "SubscriptionProductVersion": {
+          "kind": "OBJECT",
+          "fields": {
+            "billingPeriod": {
+              "type": "String!",
+              "args": {}
+            },
+            "createdAt": {
+              "type": "String!",
+              "args": {}
+            },
+            "description": {
+              "type": "String",
+              "args": {}
+            },
+            "id": {
+              "type": "String!",
+              "args": {}
+            },
+            "isProdVersion": {
+              "type": "Boolean!",
+              "args": {}
+            },
+            "isTestVersion": {
+              "type": "Boolean!",
+              "args": {}
+            },
+            "media": {
+              "type": "[MediaItem!]!",
+              "args": {}
+            },
+            "metadata": {
+              "type": "String!",
+              "args": {}
+            },
+            "name": {
+              "type": "String!",
+              "args": {}
+            },
+            "prices": {
+              "type": "[SubscriptionCurrencyPrice!]!",
+              "args": {}
+            },
+            "productId": {
+              "type": "String!",
+              "args": {}
+            },
+            "successUrl": {
+              "type": "String",
+              "args": {}
+            },
+            "versionNumber": {
+              "type": "Int!",
+              "args": {}
+            }
+          }
+        }
+      },
+      "kinds": {
+        "BillingDetail": "OBJECT",
+        "Boolean": "SCALAR",
+        "CancelInitiator": "ENUM",
+        "CardInfo": "OBJECT",
+        "CurrencyPrice": "OBJECT",
+        "DiscountApplication": "OBJECT",
+        "Int": "SCALAR",
+        "MediaItem": "OBJECT",
+        "Money": "OBJECT",
+        "OnetimeOrder": "OBJECT",
+        "OnetimeOrderFilter": "INPUT_OBJECT",
+        "OnetimeOrderOrderBy": "ENUM",
+        "OnetimeOrderStatus": "ENUM",
+        "OnetimePriceSnapshot": "OBJECT",
+        "OnetimeProduct": "OBJECT",
+        "OnetimeProductVersion": "OBJECT",
+        "Payment": "OBJECT",
+        "PaymentFilter": "INPUT_OBJECT",
+        "PaymentMethod": "OBJECT",
+        "PaymentOrderBy": "ENUM",
+        "PaymentRefundStatus": "ENUM",
+        "PaymentStatus": "ENUM",
+        "Query": "OBJECT",
+        "Refund": "OBJECT",
+        "RefundTicket": "OBJECT",
+        "RefundTicketFilter": "INPUT_OBJECT",
+        "RefundTicketOrderBy": "ENUM",
+        "RefundTicketStatus": "ENUM",
+        "RefundTicketVersion": "OBJECT",
+        "RefundTicketVersionData": "OBJECT",
+        "RequestedAmountDetails": "OBJECT",
+        "SnapshotAmountDetails": "OBJECT",
+        "Store": "OBJECT",
+        "String": "SCALAR",
+        "SubscriptionActiveDiscount": "OBJECT",
+        "SubscriptionCurrencyPrice": "OBJECT",
+        "SubscriptionOrder": "OBJECT",
+        "SubscriptionOrderFilter": "INPUT_OBJECT",
+        "SubscriptionOrderOrderBy": "ENUM",
+        "SubscriptionOrderStatus": "ENUM",
+        "SubscriptionPeriod": "OBJECT",
+        "SubscriptionPriceSnapshot": "OBJECT",
+        "SubscriptionProduct": "OBJECT",
+        "SubscriptionProductVersion": "OBJECT"
+      }
+    },
+    "merchant": {
+      "types": {
+        "BuyerMetrics": {
+          "kind": "OBJECT",
+          "fields": {
+            "newBuyers": {
+              "type": "Int!",
+              "args": {}
+            },
+            "returningBuyers": {
+              "type": "Int!",
+              "args": {}
+            },
+            "totalBuyers": {
+              "type": "Int!",
+              "args": {}
+            }
+          }
+        },
+        "DualRevenueByCurrency": {
+          "kind": "OBJECT",
+          "fields": {
+            "currency": {
+              "type": "String!",
+              "args": {}
+            },
+            "mismatchCount": {
+              "type": "Int!",
+              "args": {}
+            },
+            "paymentCount": {
+              "type": "Int!",
+              "args": {}
+            },
+            "pspTotalAmount": {
+              "type": "String!",
+              "args": {}
+            },
+            "snapshotTotalAmount": {
+              "type": "String!",
+              "args": {}
+            }
+          }
+        },
+        "DualRevenueByPeriod": {
+          "kind": "OBJECT",
+          "fields": {
+            "currency": {
+              "type": "String!",
+              "args": {}
+            },
+            "paymentCount": {
+              "type": "Int!",
+              "args": {}
+            },
+            "period": {
+              "type": "String!",
+              "args": {}
+            },
+            "pspTotalAmount": {
+              "type": "String!",
+              "args": {}
+            },
+            "snapshotTotalAmount": {
+              "type": "String!",
+              "args": {}
+            }
+          }
+        },
+        "Money": {
+          "kind": "OBJECT",
+          "fields": {
+            "amount": {
+              "type": "String!",
+              "args": {}
+            },
+            "currency": {
+              "type": "String!",
+              "args": {}
+            },
+            "display": {
+              "type": "String!",
+              "args": {}
+            }
+          }
+        },
+        "OnetimeOrder": {
+          "kind": "OBJECT",
+          "fields": {
+            "billingDetail": {
+              "type": "BillingDetail!",
+              "args": {}
+            },
+            "buyerEmail": {
+              "type": "String!",
+              "args": {}
+            },
+            "buyerIp": {
+              "type": "String!",
+              "args": {}
+            },
+            "createdAt": {
+              "type": "String!",
+              "args": {}
+            },
+            "currency": {
+              "type": "String!",
+              "args": {}
+            },
+            "discount": {
+              "type": "DiscountApplication",
+              "args": {}
+            },
+            "discountAmount": {
+              "type": "Money",
+              "args": {}
+            },
+            "id": {
+              "type": "String!",
+              "args": {}
+            },
+            "listTotal": {
+              "type": "Money",
+              "args": {}
+            },
+            "merchantProvidedBuyerIdentity": {
+              "type": "String!",
+              "args": {}
+            },
+            "metadata": {
+              "type": "String",
+              "args": {}
+            },
+            "onetimeProduct": {
+              "type": "OnetimeProduct",
+              "args": {}
+            },
+            "orderMerchantExternalId": {
+              "type": "String",
+              "args": {}
+            },
+            "payments": {
+              "type": "[Payment!]!",
+              "args": {}
+            },
+            "priceSnapshot": {
+              "type": "OnetimePriceSnapshot",
+              "args": {}
+            },
+            "productVersion": {
+              "type": "OnetimeProductVersion",
+              "args": {}
+            },
+            "productVersionId": {
+              "type": "String",
+              "args": {}
+            },
+            "status": {
+              "type": "OnetimeOrderStatus!",
+              "args": {}
+            },
+            "store": {
+              "type": "Store",
+              "args": {}
+            },
+            "storeId": {
+              "type": "String!",
+              "args": {}
+            },
+            "subtotal": {
+              "type": "Money",
+              "args": {}
+            },
+            "taxAmount": {
+              "type": "Money",
+              "args": {}
+            },
+            "testMode": {
+              "type": "Boolean!",
+              "args": {}
+            },
+            "total": {
+              "type": "Money",
+              "args": {}
+            },
+            "updatedAt": {
+              "type": "String!",
+              "args": {}
+            }
+          }
+        },
+        "OnetimeProductVersion": {
+          "kind": "OBJECT",
+          "fields": {
+            "createdAt": {
+              "type": "String!",
+              "args": {}
+            },
+            "description": {
+              "type": "String",
+              "args": {}
+            },
+            "id": {
+              "type": "String!",
+              "args": {}
+            },
+            "isProdVersion": {
+              "type": "Boolean!",
+              "args": {}
+            },
+            "isTestVersion": {
+              "type": "Boolean!",
+              "args": {}
+            },
+            "media": {
+              "type": "[MediaItem!]!",
+              "args": {}
+            },
+            "metadata": {
+              "type": "String!",
+              "args": {}
+            },
+            "name": {
+              "type": "String!",
+              "args": {}
+            },
+            "prices": {
+              "type": "[CurrencyPrice!]!",
+              "args": {}
+            },
+            "productId": {
+              "type": "String!",
+              "args": {}
+            },
+            "successUrl": {
+              "type": "String",
+              "args": {}
+            },
+            "versionNumber": {
+              "type": "Int!",
+              "args": {}
+            }
+          }
+        },
+        "OrderCountByStatus": {
+          "kind": "OBJECT",
+          "fields": {
+            "count": {
+              "type": "Int!",
+              "args": {}
+            },
+            "status": {
+              "type": "String!",
+              "args": {}
+            }
+          }
+        },
+        "OrderStatistics": {
+          "kind": "OBJECT",
+          "fields": {
+            "b2bVsB2cBreakdown": {
+              "type": "[B2BvsB2CSegment!]!",
+              "args": {
+                "currency": "String!"
+              }
+            },
+            "b2bVsB2cByMethod": {
+              "type": "[B2BvsB2CByMethod!]!",
+              "args": {
+                "currency": "String!"
+              }
+            },
+            "buyerMetrics": {
+              "type": "BuyerMetrics!",
+              "args": {}
+            },
+            "countsByPeriod": {
+              "type": "[OrderCountByPeriod!]!",
+              "args": {
+                "granularity": "TimePeriodGranularity!"
+              }
+            },
+            "countsByStatus": {
+              "type": "[OrderCountByStatus!]!",
+              "args": {}
+            },
+            "ordersByCountry": {
+              "type": "[OrderCountByCountry!]!",
+              "args": {}
+            },
+            "revenueByCountry": {
+              "type": "[RevenueByCountry!]!",
+              "args": {
+                "currency": "String!"
+              }
+            },
+            "revenueByCountryAndMethod": {
+              "type": "[RevenueByCountryAndMethod!]!",
+              "args": {
+                "currency": "String!"
+              }
+            },
+            "revenueByCurrency": {
+              "type": "[DualRevenueByCurrency!]!",
+              "args": {}
+            },
+            "revenueByPeriod": {
+              "type": "[DualRevenueByPeriod!]!",
+              "args": {
+                "granularity": "TimePeriodGranularity!",
+                "currency": "String!"
+              }
+            },
+            "revenueByState": {
+              "type": "[RevenueByState!]!",
+              "args": {
+                "country": "String!",
+                "currency": "String!"
+              }
+            },
+            "totalCount": {
+              "type": "Int!",
+              "args": {}
+            }
+          }
+        },
+        "Payment": {
+          "kind": "OBJECT",
+          "fields": {
+            "amount": {
+              "type": "Money!",
+              "args": {}
+            },
+            "cardInfo": {
+              "type": "CardInfo",
+              "args": {}
+            },
+            "chargebacks": {
+              "type": "[Chargeback!]!",
+              "args": {}
+            },
+            "createdAt": {
+              "type": "String!",
+              "args": {}
+            },
+            "failureReason": {
+              "type": "String",
+              "args": {}
+            },
+            "id": {
+              "type": "String!",
+              "args": {}
+            },
+            "invoiceToken": {
+              "type": "String",
+              "args": {}
+            },
+            "isFullyRefunded": {
+              "type": "Boolean!",
+              "args": {}
+            },
+            "onetimeOrder": {
+              "type": "OnetimeOrder",
+              "args": {}
+            },
+            "orderId": {
+              "type": "String!",
+              "args": {}
+            },
+            "orderMerchantExternalId": {
+              "type": "String",
+              "args": {}
+            },
+            "paymentMethod": {
+              "type": "PaymentMethod",
+              "args": {}
+            },
+            "paymentMethodDetails": {
+              "type": "String",
+              "args": {}
+            },
+            "periodNumber": {
+              "type": "Int",
+              "args": {}
+            },
+            "pspAmountDetails": {
+              "type": "PspAmountDetails!",
+              "args": {}
+            },
+            "pspPaymentId": {
+              "type": "String",
+              "args": {}
+            },
+            "refundedAmount": {
+              "type": "Money!",
+              "args": {}
+            },
+            "refunds": {
+              "type": "[Refund!]!",
+              "args": {}
+            },
+            "refundStatus": {
+              "type": "PaymentRefundStatus!",
+              "args": {}
+            },
+            "settlementBatch": {
+              "type": "SettlementBatch",
+              "args": {}
+            },
+            "settlementInfo": {
+              "type": "SettlementInfo",
+              "args": {}
+            },
+            "snapshotAmountDetails": {
+              "type": "SnapshotAmountDetails!",
+              "args": {}
+            },
+            "status": {
+              "type": "PaymentStatus!",
+              "args": {}
+            },
+            "subscriptionOrder": {
+              "type": "SubscriptionOrder",
+              "args": {}
+            },
+            "testMode": {
+              "type": "Boolean!",
+              "args": {}
+            }
+          }
+        },
+        "Query": {
+          "kind": "OBJECT",
+          "fields": {
+            "onetimeOrders": {
+              "type": "[OnetimeOrder!]!",
+              "args": {
+                "storeId": "String",
+                "storeSlug": "String",
+                "limit": "Int",
+                "offset": "Int",
+                "filter": "OnetimeOrderFilter",
+                "orderBy": "[OnetimeOrderOrderBy!]"
+              }
+            },
+            "orderStatistics": {
+              "type": "OrderStatistics",
+              "args": {
+                "storeId": "String",
+                "storeSlug": "String",
+                "filter": "AnalyticsFilterInput!"
+              }
+            },
+            "subscriptionOrders": {
+              "type": "[SubscriptionOrder!]!",
+              "args": {
+                "storeId": "String",
+                "storeSlug": "String",
+                "limit": "Int",
+                "offset": "Int",
+                "filter": "SubscriptionOrderFilter",
+                "orderBy": "[SubscriptionOrderOrderBy!]"
+              }
+            }
+          }
+        },
+        "SubscriptionOrder": {
+          "kind": "OBJECT",
+          "fields": {
+            "activateAt": {
+              "type": "String",
+              "args": {}
+            },
+            "activeDiscount": {
+              "type": "SubscriptionActiveDiscount",
+              "args": {}
+            },
+            "billingDetail": {
+              "type": "BillingDetail!",
+              "args": {}
+            },
+            "billingPeriod": {
+              "type": "String",
+              "args": {}
+            },
+            "buyerEmail": {
+              "type": "String!",
+              "args": {}
+            },
+            "buyerIp": {
+              "type": "String!",
+              "args": {}
+            },
+            "cancelActions": {
+              "type": "[SubscriptionCancelReason!]!",
+              "args": {}
+            },
+            "canceledAt": {
+              "type": "String",
+              "args": {}
+            },
+            "cancelInitiator": {
+              "type": "CancelInitiator",
+              "args": {}
+            },
+            "canReactivate": {
+              "type": "Boolean!",
+              "args": {}
+            },
+            "changeOriginOrderId": {
+              "type": "String",
+              "args": {}
+            },
+            "createdAt": {
+              "type": "String!",
+              "args": {}
+            },
+            "currency": {
+              "type": "String!",
+              "args": {}
+            },
+            "currentPeriod": {
+              "type": "SubscriptionPeriod",
+              "args": {}
+            },
+            "currentPeriodEnd": {
+              "type": "String",
+              "args": {}
+            },
+            "currentPeriodNumber": {
+              "type": "Int",
+              "args": {}
+            },
+            "currentPeriodStart": {
+              "type": "String",
+              "args": {}
+            },
+            "discount": {
+              "type": "DiscountApplication",
+              "args": {}
+            },
+            "id": {
+              "type": "String!",
+              "args": {}
+            },
+            "isInTrial": {
+              "type": "Boolean!",
+              "args": {}
+            },
+            "merchantProvidedBuyerIdentity": {
+              "type": "String!",
+              "args": {}
+            },
+            "metadata": {
+              "type": "String",
+              "args": {}
+            },
+            "orderMerchantExternalId": {
+              "type": "String",
+              "args": {}
+            },
+            "payments": {
+              "type": "[Payment!]!",
+              "args": {}
+            },
+            "priceSnapshot": {
+              "type": "SubscriptionPriceSnapshot",
+              "args": {}
+            },
+            "productVersion": {
+              "type": "SubscriptionProductVersion",
+              "args": {}
+            },
+            "productVersionId": {
+              "type": "String",
+              "args": {}
+            },
+            "pspSubscriptionId": {
+              "type": "String",
+              "args": {}
+            },
+            "status": {
+              "type": "SubscriptionOrderStatus!",
+              "args": {}
+            },
+            "store": {
+              "type": "Store",
+              "args": {}
+            },
+            "storeId": {
+              "type": "String!",
+              "args": {}
+            },
+            "subscriptionProduct": {
+              "type": "SubscriptionProduct",
+              "args": {}
+            },
+            "supersededByOrderId": {
+              "type": "String",
+              "args": {}
+            },
+            "testMode": {
+              "type": "Boolean!",
+              "args": {}
+            },
+            "updatedAt": {
+              "type": "String!",
+              "args": {}
+            },
+            "willRenew": {
+              "type": "Boolean!",
+              "args": {}
+            }
+          }
+        },
+        "SubscriptionProductVersion": {
+          "kind": "OBJECT",
+          "fields": {
+            "billingPeriod": {
+              "type": "String!",
+              "args": {}
+            },
+            "createdAt": {
+              "type": "String!",
+              "args": {}
+            },
+            "description": {
+              "type": "String",
+              "args": {}
+            },
+            "id": {
+              "type": "String!",
+              "args": {}
+            },
+            "isProdVersion": {
+              "type": "Boolean!",
+              "args": {}
+            },
+            "isTestVersion": {
+              "type": "Boolean!",
+              "args": {}
+            },
+            "media": {
+              "type": "[MediaItem!]!",
+              "args": {}
+            },
+            "metadata": {
+              "type": "String!",
+              "args": {}
+            },
+            "name": {
+              "type": "String!",
+              "args": {}
+            },
+            "prices": {
+              "type": "[SubscriptionCurrencyPrice!]!",
+              "args": {}
+            },
+            "productId": {
+              "type": "String!",
+              "args": {}
+            },
+            "successUrl": {
+              "type": "String",
+              "args": {}
+            },
+            "versionNumber": {
+              "type": "Int!",
+              "args": {}
+            }
+          }
+        },
+        "AnalyticsFilterInput": {
+          "kind": "INPUT_OBJECT",
+          "fields": {
+            "timeRange": "TimeRangeInput!",
+            "currency": "String",
+            "status": "String"
+          }
+        },
+        "TimeRangeInput": {
+          "kind": "INPUT_OBJECT",
+          "fields": {
+            "startDate": "String!",
+            "endDate": "String!"
+          }
+        }
+      },
+      "kinds": {
+        "AnalyticsFilterInput": "INPUT_OBJECT",
+        "B2BvsB2CByMethod": "OBJECT",
+        "B2BvsB2CSegment": "OBJECT",
+        "BillingDetail": "OBJECT",
+        "Boolean": "SCALAR",
+        "BuyerMetrics": "OBJECT",
+        "CancelInitiator": "ENUM",
+        "CardInfo": "OBJECT",
+        "Chargeback": "OBJECT",
+        "CurrencyPrice": "OBJECT",
+        "DiscountApplication": "OBJECT",
+        "DualRevenueByCurrency": "OBJECT",
+        "DualRevenueByPeriod": "OBJECT",
+        "Int": "SCALAR",
+        "MediaItem": "OBJECT",
+        "Money": "OBJECT",
+        "OnetimeOrder": "OBJECT",
+        "OnetimeOrderFilter": "INPUT_OBJECT",
+        "OnetimeOrderOrderBy": "ENUM",
+        "OnetimeOrderStatus": "ENUM",
+        "OnetimePriceSnapshot": "OBJECT",
+        "OnetimeProduct": "OBJECT",
+        "OnetimeProductVersion": "OBJECT",
+        "OrderCountByCountry": "OBJECT",
+        "OrderCountByPeriod": "OBJECT",
+        "OrderCountByStatus": "OBJECT",
+        "OrderStatistics": "OBJECT",
+        "Payment": "OBJECT",
+        "PaymentMethod": "OBJECT",
+        "PaymentRefundStatus": "ENUM",
+        "PaymentStatus": "ENUM",
+        "PspAmountDetails": "OBJECT",
+        "Query": "OBJECT",
+        "Refund": "OBJECT",
+        "RevenueByCountry": "OBJECT",
+        "RevenueByCountryAndMethod": "OBJECT",
+        "RevenueByState": "OBJECT",
+        "SettlementBatch": "OBJECT",
+        "SettlementInfo": "OBJECT",
+        "SnapshotAmountDetails": "OBJECT",
+        "Store": "OBJECT",
+        "String": "SCALAR",
+        "SubscriptionActiveDiscount": "OBJECT",
+        "SubscriptionCancelReason": "OBJECT",
+        "SubscriptionCurrencyPrice": "OBJECT",
+        "SubscriptionOrder": "OBJECT",
+        "SubscriptionOrderFilter": "INPUT_OBJECT",
+        "SubscriptionOrderOrderBy": "ENUM",
+        "SubscriptionOrderStatus": "ENUM",
+        "SubscriptionPeriod": "OBJECT",
+        "SubscriptionPriceSnapshot": "OBJECT",
+        "SubscriptionProduct": "OBJECT",
+        "SubscriptionProductVersion": "OBJECT",
+        "TimePeriodGranularity": "ENUM",
+        "TimeRangeInput": "INPUT_OBJECT"
+      }
+    }
+  }
+}

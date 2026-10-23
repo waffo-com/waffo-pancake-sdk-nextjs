@@ -1,4 +1,4 @@
-import type { CheckoutAction } from "./server.js";
+import type { CheckoutAction, WithoutMerchantOnlyFields } from "./server.js";
 import type {
   AnonymousCheckoutParams,
   AuthenticatedCheckoutParams,
@@ -42,28 +42,50 @@ export interface LinkCheckoutProps extends CheckoutBaseOptions {
   /** Is business purchase */
   isBusiness?: boolean;
   /**
+   * Coupon code or promotion code to apply on the product page (sent as `discount_code`).
+   * The code is applied and locked: the customer sees the discount but no code entry field,
+   * and cannot change or remove it. If the code cannot be used, the checkout page says why.
+   * Works for one-time and subscription products. On a subscription the coupon's duration
+   * decides how many billing periods are discounted; a free trial uses no discount, and it
+   * starts with the first paid period. A product link never starts a plan change; for how
+   * discounts behave on one, see https://docs.waffo.ai/guides/discounts#plan-changes.
+   */
+  discountCode?: string;
+  /**
    * Base URL of the storefront. Default: `"https://pancake.waffo.ai"`
    */
   baseUrl?: string;
 }
 
-/** Anonymous checkout — creates session via server action */
+/**
+ * Anonymous checkout — creates session via server action.
+ *
+ * `couponId`, `promotionCode`, `priceSnapshot` and `withTrial` are not accepted (typed `never`): the
+ * server action strips them, because anything the browser sends would be applied with your API Key.
+ * Set `allowPromotionCodes` to let the customer enter a code; set a coupon, promotion code, custom
+ * price or trial choice from your own server code with `@waffo/pancake-ts`.
+ */
 export type AnonymousCheckoutProps = CheckoutBaseOptions & {
   type?: "anonymous";
   /** Server action created by `createCheckoutAction()` */
   action: CheckoutAction;
   /** Callback fired when checkout session is successfully created */
   onSuccess?: (result: CheckoutSessionResult) => void;
-} & AnonymousCheckoutParams;
+} & WithoutMerchantOnlyFields<AnonymousCheckoutParams>;
 
-/** Authenticated checkout — creates session + token via server action */
+/**
+ * Authenticated checkout — creates session + token via server action.
+ *
+ * `couponId`, `promotionCode`, `priceSnapshot` and `withTrial` are not accepted, for the same reason
+ * as on {@link AnonymousCheckoutProps}.
+ */
 export type AuthenticatedCheckoutProps = CheckoutBaseOptions & {
   type: "authenticated";
   /** Server action created by `createCheckoutAction()` */
   action: CheckoutAction;
   /** Callback fired when checkout session is successfully created */
   onSuccess?: (result: AuthenticatedCheckoutResult) => void;
-} & AuthenticatedCheckoutParams;
+} & WithoutMerchantOnlyFields<AuthenticatedCheckoutParams>;
 
 /** Union of all checkout prop types */
 export type CheckoutProps = LinkCheckoutProps | AnonymousCheckoutProps | AuthenticatedCheckoutProps;
@@ -76,4 +98,21 @@ export interface UseCheckoutReturn {
   isLoading: boolean;
   /** Error from the last checkout attempt, if any */
   error: Error | null;
+}
+
+/**
+ * Monetary value as the GraphQL `Money` type returns it.
+ *
+ * @example
+ * ```ts
+ * const price: GraphQLMoney = { amount: "999", currency: "USD", display: "9.99" };
+ * ```
+ */
+export interface GraphQLMoney {
+  /** Integer string in minor currency units (e.g. `"999"` for USD 9.99) */
+  amount: string;
+  /** ISO 4217 currency code */
+  currency: string;
+  /** Human-readable amount in major units (e.g. `"9.99"`) */
+  display: string;
 }
