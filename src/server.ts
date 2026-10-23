@@ -52,10 +52,35 @@ import type {
 // ============================================================
 
 /**
- * Discount fields only the merchant may set: they are applied with the API Key, so the
- * checkout server action never accepts them from the browser.
+ * Checkout fields only the merchant may set: the server action signs with the API Key, so
+ * whatever it forwards is applied as the merchant's own choice — a coupon or prefilled
+ * promotion code (`couponId`, `promotionCode`), a custom price (`priceSnapshot`), the trial
+ * decision (`withTrial`) and the plan change amount (`changeAmount`, `changeCreditAmount`).
+ * The checkout server action never accepts them from the browser.
  */
-type MerchantOnlyDiscountField = "couponId" | "promotionCode";
+export type MerchantOnlyCheckoutField =
+  | "couponId"
+  | "promotionCode"
+  | "priceSnapshot"
+  | "withTrial"
+  | "changeAmount"
+  | "changeCreditAmount";
+
+/**
+ * `T` without the {@link MerchantOnlyCheckoutField} fields, each re-declared as `never` so that
+ * passing one is a compile error rather than a silently dropped value.
+ *
+ * @example
+ * ```ts
+ * type Params = WithoutMerchantOnlyFields<AnonymousCheckoutParams>;
+ * const ok: Params = { productId: "PROD_xxx", currency: "USD", allowPromotionCodes: true };
+ * // @ts-expect-error — priceSnapshot is merchant-only
+ * const bad: Params = { productId: "PROD_xxx", currency: "USD", priceSnapshot: { amount: "1.00", taxCategory: "saas" } };
+ * ```
+ */
+export type WithoutMerchantOnlyFields<T> = Omit<T, MerchantOnlyCheckoutField> & {
+  [K in MerchantOnlyCheckoutField]?: never;
+};
 
 /**
  * Parameters for the checkout server action.
@@ -64,14 +89,15 @@ type MerchantOnlyDiscountField = "couponId" | "promotionCode";
  * or a plan change for an existing subscription (`planChange` /
  * `authenticatedPlanChange`, which carry the required `originOrderId`).
  *
- * `couponId` and `promotionCode` are left off every shape and stripped at runtime — see
- * {@link createCheckoutAction}.
+ * The {@link MerchantOnlyCheckoutField} fields (`couponId`, `promotionCode`, `priceSnapshot`,
+ * `withTrial`, `changeAmount`, `changeCreditAmount`) are typed `never` on every shape and
+ * stripped at runtime — see {@link createCheckoutAction}.
  */
 export type CheckoutActionParams =
-  | ({ type?: "anonymous" } & Omit<AnonymousCheckoutParams, MerchantOnlyDiscountField>)
-  | ({ type: "authenticated" } & Omit<AuthenticatedCheckoutParams, MerchantOnlyDiscountField>)
-  | ({ type: "planChange" } & Omit<CreatePlanChangeSessionParams, MerchantOnlyDiscountField>)
-  | ({ type: "authenticatedPlanChange" } & Omit<AuthenticatedPlanChangeParams, MerchantOnlyDiscountField>);
+  | ({ type?: "anonymous" } & WithoutMerchantOnlyFields<AnonymousCheckoutParams>)
+  | ({ type: "authenticated" } & WithoutMerchantOnlyFields<AuthenticatedCheckoutParams>)
+  | ({ type: "planChange" } & WithoutMerchantOnlyFields<CreatePlanChangeSessionParams>)
+  | ({ type: "authenticatedPlanChange" } & WithoutMerchantOnlyFields<AuthenticatedPlanChangeParams>);
 
 /** Result of the checkout server action */
 export type CheckoutActionResult = CheckoutSessionResult | AuthenticatedCheckoutResult;
@@ -85,18 +111,43 @@ export type CheckoutActionResult = CheckoutSessionResult | AuthenticatedCheckout
 export type CheckoutAction = (params: CheckoutActionParams, options?: RequestOptions) => Promise<CheckoutActionResult>;
 
 /**
- * Remove `couponId` and `promotionCode` from parameters that arrived from the browser.
+ * Remove every {@link MerchantOnlyCheckoutField} from parameters that arrived from the browser.
  *
- * A Server Action is callable with arbitrary arguments, and this one signs with the
- * merchant API Key — the credential allowed to apply a coupon or prefill a promotion
- * code. Forwarding a browser-supplied `couponId` would let a customer apply any coupon
- * of the store to their own purchase, and a browser-supplied `promotionCode` would be
- * applied as a merchant-chosen code (locked unless `allowPromotionCodes` is on), so both
- * are dropped on every flow, new purchase and plan change alike.
+ * Behavior:
+ * - Drops `couponId`, `promotionCode`, `priceSnapshot`, `withTrial`, `changeAmount` and
+ *   `changeCreditAmount`; every other field (`allowPromotionCodes` included) is kept.
+ *
+ * Side effects:
+ * - None: returns a shallow copy, the input is not modified.
+ *
+ * Edge cases:
+ * - Applied on every flow, new purchase and plan change alike. A Server Action is callable
+ *   with arbitrary arguments and this one signs with the merchant API Key, so a forwarded
+ *   field would be honored as the merchant's choice: any coupon of the store, a prefilled
+ *   code, a price of the customer's choosing, a skipped trial check, or a plan change
+ *   charge or credit the customer picked.
+ *
+ * @param params - Parameters as received by the server action
+ * @returns The parameters without the merchant-only fields
+ *
+ * @example
+ * ```ts
+ * stripMerchantOnlyFields({ productId: "PROD_xxx", currency: "USD", priceSnapshot: { amount: "0.01", taxCategory: "saas" } });
+ * // => { productId: "PROD_xxx", currency: "USD" }
+ * ```
  */
-function stripMerchantOnlyDiscount<T extends object>(params: T): Omit<T, MerchantOnlyDiscountField> {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- drop the browser-supplied coupon and promotion code
-  const { couponId, promotionCode, ...rest } = params as T & { couponId?: unknown; promotionCode?: unknown };
+function stripMerchantOnlyFields<T extends object>(params: T): Omit<T, MerchantOnlyCheckoutField> {
+  const {
+    /* eslint-disable @typescript-eslint/no-unused-vars -- drop the browser-supplied merchant-only fields */
+    couponId,
+    promotionCode,
+    priceSnapshot,
+    withTrial,
+    changeAmount,
+    changeCreditAmount,
+    /* eslint-enable @typescript-eslint/no-unused-vars */
+    ...rest
+  } = params as T & Partial<Record<MerchantOnlyCheckoutField, unknown>>;
   return rest;
 }
 
@@ -107,14 +158,15 @@ function stripMerchantOnlyDiscount<T extends object>(params: T): Omit<T, Merchan
  *
  * Handles both new purchases and plan changes; `params.type` selects the flow.
  *
- * `couponId` and `promotionCode` are always stripped before the request is sent, on
- * new purchases and plan changes: a Server Action is callable from the browser with any
- * arguments, and a coupon or promotion code set with your API Key is applied as your
- * choice. To apply one, call `@waffo/pancake-ts`
- * (`client.checkout.authenticated.create({ ..., couponId })`, or `promotionCode`, or the
- * plan change methods) from your own server code after deciding the customer is entitled
- * to it. `allowPromotionCodes` is forwarded — it only shows the code entry field, and
- * every code is checked by the platform.
+ * `couponId`, `promotionCode`, `priceSnapshot`, `withTrial`, `changeAmount` and
+ * `changeCreditAmount` are always stripped before the request is sent, on new purchases
+ * and plan changes: a Server Action is callable from the browser with any arguments, and
+ * whatever is sent with your API Key is applied as your choice. To set any of them, call
+ * `@waffo/pancake-ts` (`client.checkout.authenticated.create({ ..., couponId })`,
+ * `client.checkout.anonymous.create({ ..., priceSnapshot })`,
+ * `client.checkout.createPlanChangeSession({ ..., changeCreditAmount })`, …) from your own
+ * server code after deciding the customer is entitled to it. `allowPromotionCodes` is
+ * forwarded — it only shows the code entry field, and every code is checked by the platform.
  *
  * @param config - WaffoPancake client configuration (merchantId + privateKey)
  * @returns A server action function
@@ -146,7 +198,7 @@ export function createCheckoutAction(config: WaffoPancakeConfig): CheckoutAction
   const client = new WaffoPancake(config);
 
   return async (rawParams: CheckoutActionParams, options?: RequestOptions): Promise<CheckoutActionResult> => {
-    const params = stripMerchantOnlyDiscount(rawParams) as CheckoutActionParams;
+    const params = stripMerchantOnlyFields(rawParams) as CheckoutActionParams;
     if (params.type === "authenticated") {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars -- remove type field before passing to SDK
       const { type, ...sdkParams } = params;

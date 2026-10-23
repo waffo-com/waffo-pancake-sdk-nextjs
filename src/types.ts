@@ -1,4 +1,4 @@
-import type { CheckoutAction } from "./server.js";
+import type { CheckoutAction, WithoutMerchantOnlyFields } from "./server.js";
 import type {
   AnonymousCheckoutParams,
   AuthenticatedCheckoutParams,
@@ -60,9 +60,10 @@ export interface LinkCheckoutProps extends CheckoutBaseOptions {
 /**
  * Anonymous checkout — creates session via server action.
  *
- * `couponId` and `promotionCode` are not accepted: the server action strips them, because anything
- * the browser sends would be applied with your API Key. Set `allowPromotionCodes` to let the customer
- * enter a code, or apply a coupon or promotion code from your own server code with `@waffo/pancake-ts`.
+ * `couponId`, `promotionCode`, `priceSnapshot` and `withTrial` are not accepted (typed `never`): the
+ * server action strips them, because anything the browser sends would be applied with your API Key.
+ * Set `allowPromotionCodes` to let the customer enter a code; set a coupon, promotion code, custom
+ * price or trial choice from your own server code with `@waffo/pancake-ts`.
  */
 export type AnonymousCheckoutProps = CheckoutBaseOptions & {
   type?: "anonymous";
@@ -70,12 +71,13 @@ export type AnonymousCheckoutProps = CheckoutBaseOptions & {
   action: CheckoutAction;
   /** Callback fired when checkout session is successfully created */
   onSuccess?: (result: CheckoutSessionResult) => void;
-} & Omit<AnonymousCheckoutParams, "couponId" | "promotionCode">;
+} & WithoutMerchantOnlyFields<AnonymousCheckoutParams>;
 
 /**
  * Authenticated checkout — creates session + token via server action.
  *
- * `couponId` and `promotionCode` are not accepted, for the same reason as on {@link AnonymousCheckoutProps}.
+ * `couponId`, `promotionCode`, `priceSnapshot` and `withTrial` are not accepted, for the same reason
+ * as on {@link AnonymousCheckoutProps}.
  */
 export type AuthenticatedCheckoutProps = CheckoutBaseOptions & {
   type: "authenticated";
@@ -83,7 +85,7 @@ export type AuthenticatedCheckoutProps = CheckoutBaseOptions & {
   action: CheckoutAction;
   /** Callback fired when checkout session is successfully created */
   onSuccess?: (result: AuthenticatedCheckoutResult) => void;
-} & Omit<AuthenticatedCheckoutParams, "couponId" | "promotionCode">;
+} & WithoutMerchantOnlyFields<AuthenticatedCheckoutParams>;
 
 /** Union of all checkout prop types */
 export type CheckoutProps = LinkCheckoutProps | AnonymousCheckoutProps | AuthenticatedCheckoutProps;
