@@ -38,6 +38,7 @@ export type {
   AuthenticatedCheckoutProps,
   CheckoutProps,
   UseCheckoutReturn,
+  GraphQLMoney,
 } from "./types.js";
 
 export type { CustomerConfig, BuyerConfig, WaffoPancakeProviderProps } from "./provider.js";
@@ -58,6 +59,9 @@ export type {
   CustomerSubscriptionOrder,
   CustomerPayment,
   CustomerRefundTicket,
+  CustomerOrderPayment,
+  CustomerOrdersOptions,
+  CustomerPaymentsOptions,
   BuyerOnetimeOrder,
   BuyerSubscriptionOrder,
   BuyerPayment,
@@ -70,6 +74,8 @@ export type {
   SalesOverview,
   SubscriptionOverview,
   MerchantOrdersOptions,
+  MerchantSalesOptions,
+  MerchantSalesGranularity,
 } from "./use-merchant-data.js";
 
 export type { WebhookConfig } from "./webhook.js";

@@ -371,12 +371,14 @@ export default function AccountLayout({ user }: { user: { email: string } }) {
 
 // All hooks work without passing token or client
 function AccountPage() {
-  const { data: orders, isLoading, refetch } = useCustomerOrders();
-  const { data: payments } = useCustomerPayments();
+  // Order lists need the store: pass storeId or storeSlug, or they come back empty
+  const { data: orders, isLoading, error, refetch } = useCustomerOrders({ storeId: "STO_xxx" });
+  const { data: payments } = useCustomerPayments({ storeId: "STO_xxx" });
   const { data: tickets } = useCustomerRefundTickets();
   const customer = useCustomer();
 
   if (isLoading) return <p>Loading...</p>;
+  if (error) return <p>{error.message}</p>;
 
   return (
     <div>
@@ -384,7 +386,7 @@ function AccountPage() {
       {orders?.subscriptionOrders.map((sub) => (
         <div key={sub.id}>
           <p>
-            {sub.product?.name} — {sub.status}
+            {sub.productVersion?.name} — {sub.status}
           </p>
           {sub.status === "active" && <button onClick={() => customer.cancelSubscription.execute({ orderId: sub.id })}>Cancel</button>}
           {sub.status === "canceling" && (
@@ -396,7 +398,7 @@ function AccountPage() {
       {/* Order history */}
       {orders?.onetimeOrders.map((order) => (
         <p key={order.id}>
-          {order.product?.name} — {order.status}
+          {order.productVersion?.name} — {order.status}
         </p>
       ))}
 
@@ -419,14 +421,16 @@ function AccountPage() {
 
 ### Customer Hooks
 
-| Hook                         | Returns                                                                                                                     |     Auto-fetches?      |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------- | :--------------------: |
-| `useCustomer()`              | `cancelSubscription`, `cancelOnetimeOrder`, `reactivateSubscription`, `createRefundTicket`, `resubmitRefundTicket`, `query` | No — call `.execute()` |
-| `useCustomerOrders()`        | `{ onetimeOrders, subscriptionOrders }` with product, payments, billing cycle                                               |          Yes           |
-| `useCustomerPayments()`      | Payment records — amount, status, failure reason                                                                            |          Yes           |
-| `useCustomerRefundTickets()` | Refund tickets — status, reason, amount                                                                                     |          Yes           |
+| Hook                                          | Returns                                                                                                                     |     Auto-fetches?      |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | :--------------------: |
+| `useCustomer()`                               | `cancelSubscription`, `cancelOnetimeOrder`, `reactivateSubscription`, `createRefundTicket`, `resubmitRefundTicket`, `query` | No — call `.execute()` |
+| `useCustomerOrders({ storeId \| storeSlug })` | `{ onetimeOrders, subscriptionOrders }` with product version, payments, billing cycle                                       |          Yes           |
+| `useCustomerPayments({ storeId? })`           | Payment records — `amount` (`{ amount, currency, display }`), status, failure reason                                        |          Yes           |
+| `useCustomerRefundTickets()`                  | Refund tickets — status, reason, amount                                                                                     |          Yes           |
 
-Action hooks return `{ execute, isLoading, error, data }`. Data hooks return `{ data, isLoading, error, refetch }`.
+`useCustomerOrders` must be given `storeId` or `storeSlug`: the order lists only return orders of the store you name, and without one both lists are empty. `useCustomerPayments` takes an optional `storeId` to limit payments to one store. The product name is on `productVersion.name` (with `productId` and `versionNumber`); a subscription's cancellation time is `canceledAt`.
+
+Action hooks return `{ execute, isLoading, error, data }`. Data hooks return `{ data, isLoading, error, refetch }`; a GraphQL error from the server lands in `error`, with the server's message.
 
 ## Customer Portal (SSO)
 
@@ -526,7 +530,7 @@ const result = await customer.query({
 
 ## Merchant Data
 
-Pre-built hooks for merchant dashboards. Pass a server action and store ID:
+Pre-built hooks for merchant dashboards. Pass a server action and store ID; the sales overview also takes a time range and the currency revenue is reported in:
 
 ```tsx
 import { useMerchantSales, useMerchantOrders, useMerchantSubscriptions } from "@waffo/pancake-nextjs";
@@ -534,17 +538,23 @@ import { merchantQuery } from "./lib/waffo";
 
 function Dashboard() {
   const storeId = "STO_xxx";
-  const { data: sales } = useMerchantSales(merchantQuery, storeId);
+  const { data: sales } = useMerchantSales(merchantQuery, {
+    storeId,
+    startDate: "2026-10-01", // inclusive, ISO 8601
+    endDate: "2026-11-01", // exclusive
+    currency: "USD",
+    granularity: "WEEK", // revenueByPeriod buckets; default "DAY"
+  });
   const { data: orders, refetch } = useMerchantOrders(merchantQuery, { storeId, limit: 10 });
   const { data: subs } = useMerchantSubscriptions(merchantQuery, storeId);
 
   // sales: { totalRevenue, totalOrders, totalCustomers, currency, ordersByStatus, revenueByPeriod }
-  // orders: { onetimeOrders, subscriptionOrders } — each with product, payments, testMode
+  // orders: { onetimeOrders, subscriptionOrders } — each with productVersion, payments (amount), testMode
   // subs: { activeCount, cancelingCount, pastDueCount, totalCount, subscriptions }
 }
 ```
 
-All merchant hooks return `{ data, isLoading, error, refetch }`.
+All merchant hooks return `{ data, isLoading, error, refetch }`; a GraphQL error from the server lands in `error`, with the server's message. `totalRevenue` and `revenueByPeriod[].amount` are display strings counted from succeeded payments in `currency`, at the amount charged to buyers.
 
 ## Server Actions
 

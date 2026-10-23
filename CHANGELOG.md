@@ -6,7 +6,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ## [Unreleased]
 
-Customers can use coupon codes and promotion codes at checkout for one-time products, new subscriptions and plan changes.
+Customers can use coupon codes and promotion codes at checkout for one-time products, new subscriptions and plan changes. The built-in data hooks work against the current GraphQL schema — their return types change, see the BREAKING entries under Changed.
 
 ### Added
 
@@ -14,6 +14,22 @@ Customers can use coupon codes and promotion codes at checkout for one-time prod
 - **`allowPromotionCodes` passes through `createCheckoutAction`** for anonymous and authenticated checkout, showing a code entry field on the checkout page. The typed prop comes with `@waffo/pancake-ts` 0.27.0 (the release that adds `couponId` / `allowPromotionCodes` to `CreateCheckoutSessionParams`); the dependency range is raised to `^0.27.0` when that version is published.
 - **`allowPromotionCodes` passes through `createCheckoutAction` on plan changes** (`planChange` / `authenticatedPlanChange`), showing a code entry field on the change confirmation page. A code the customer enters replaces the subscription's current discount; without one, the current discount carries over to the new plan while it still applies — see [Discounts](https://docs.waffo.ai/guides/discounts#plan-changes). Typed with `@waffo/pancake-ts` 0.27.0, like the new-purchase prop.
 - **`listTotal` / `discountAmount` on webhook amount blocks** — `event.data.listPrice` (payment events) and `event.data.originalPayment` (refund events) in `Webhook()` handlers are typed with the price before the discount and the tax-inclusive discount, read as `listTotal - discountAmount = total`. No code change in this package: the fields come with the `WebhookEventData` re-exported from `@waffo/pancake-ts` 0.27.0, and appear once the dependency range is raised to `^0.27.0`.
+- **`CustomerOrdersOptions`, `CustomerPaymentsOptions`, `CustomerOrderPayment`, `MerchantSalesOptions`, `MerchantSalesGranularity`, `GraphQLMoney`** types.
+
+### Changed
+
+The built-in data hooks queried fields the GraphQL schema does not have, so every call to `useCustomerOrders`, `useCustomerPayments`, `useMerchantOrders`, `useMerchantSales` and `useMerchantSubscriptions` failed. Their queries now follow the schema, which changes the returned shapes:
+
+- **BREAKING: `product` → `productVersion` on orders and subscriptions.** `CustomerOnetimeOrder`, `CustomerSubscriptionOrder`, `MerchantOrder` and `MerchantSubscription` carry `productVersion: { productId, versionNumber, name } | null` (subscriptions add `billingPeriod`) — the product version the order was placed for. Migrate `order.product?.name` → `order.productVersion?.name` and `order.product?.id` → `order.productVersion?.productId`.
+- **BREAKING: payment amounts are `amount: { amount, currency, display }`.** `CustomerPayment` and the `payments` on customer and merchant orders replace `snapshotDisplayAmount` / `snapshotDisplayCurrency` with `amount` (`GraphQLMoney`: minor-unit integer string, ISO 4217 currency, major-unit display string), the total charged to the buyer. Migrate `p.snapshotDisplayAmount` → `p.amount.display` and `p.snapshotDisplayCurrency` → `p.amount.currency`.
+- **BREAKING: `cancelAt` → `canceledAt`** on `CustomerSubscriptionOrder` and `MerchantSubscription`.
+- **BREAKING: `useMerchantSales(query, storeId)` → `useMerchantSales(query, { storeId, startDate, endDate, currency, granularity? })`.** Store statistics need a time range (`startDate` inclusive, `endDate` exclusive, ISO 8601), and revenue is reported in one `currency`. `SalesOverview` keeps its fields: `totalRevenue` and `revenueByPeriod` are the succeeded-payment revenue in `currency` at the amount charged to buyers (`"0"` / `[]` when there is none), `totalCustomers` counts distinct buyers in the range, and `granularity` (`"DAY"` default, `"WEEK"`, `"MONTH"`, `"QUARTER"`, `"YEAR"`, `"ALL_TIME"`) sets the `revenueByPeriod` buckets.
+- **`useCustomerOrders(options?)` takes `{ storeId?, storeSlug? }`, `useCustomerPayments(options?)` takes `{ storeId? }`.** The order lists only return orders of the store you name: call `useCustomerOrders({ storeId })` or `useCustomerOrders({ storeSlug })` — without either, both lists are empty. `useCustomerPayments` without `storeId` returns every payment the customer session can read.
+
+### Fixed
+
+- **Data hooks surface GraphQL errors.** Customer hooks returned `result.data` and dropped the response's `errors`; merchant hooks read fields of `data` even when it was `null` (`Cannot read properties of null`). All six data hooks now put the GraphQL error messages, verbatim and joined with `"; "`, into `error`, and leave `data` at `null` when the server sends none.
+- **Merchant hooks declare `$storeId` as `String!`**, the type the `storeId` arguments take; `ID!` was rejected by the server.
 
 ### Security
 

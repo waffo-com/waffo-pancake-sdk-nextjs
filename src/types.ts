@@ -97,3 +97,20 @@ export interface UseCheckoutReturn {
   /** Error from the last checkout attempt, if any */
   error: Error | null;
 }
+
+/**
+ * Monetary value as the GraphQL `Money` type returns it.
+ *
+ * @example
+ * ```ts
+ * const price: GraphQLMoney = { amount: "999", currency: "USD", display: "9.99" };
+ * ```
+ */
+export interface GraphQLMoney {
+  /** Integer string in minor currency units (e.g. `"999"` for USD 9.99) */
+  amount: string;
+  /** ISO 4217 currency code */
+  currency: string;
+  /** Human-readable amount in major units (e.g. `"9.99"`) */
+  display: string;
+}
