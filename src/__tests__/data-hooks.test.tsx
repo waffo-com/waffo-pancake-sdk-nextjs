@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
@@ -18,7 +18,7 @@ import {
   useMerchantSales,
   useMerchantSubscriptions,
 } from "../use-merchant-data.js";
-import { readGraphQLData } from "../use-query.js";
+import { readGraphQLData, useQuery } from "../use-query.js";
 
 import type { PancakeContextValue } from "../provider.js";
 import type { MerchantQueryAction } from "../server.js";
@@ -262,5 +262,79 @@ describe("merchant data hooks", () => {
     await waitFor(() => expect(none.current.isLoading).toBe(false));
     expect(none.current.error).toBeNull();
     expect(none.current.data).toBeNull();
+  });
+});
+
+describe("useQuery", () => {
+  /** A promise whose settlement the test controls. */
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    let reject!: (err: unknown) => void;
+    const promise = new Promise<T>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve, reject };
+  }
+
+  it("clears data when a refetch fails", async () => {
+    let fail = false;
+    const queryFn = vi.fn(() => (fail ? Promise.reject(new Error("boom")) : Promise.resolve({ n: 1 })));
+    const { result } = renderHook(() => useQuery(queryFn, true));
+
+    await waitFor(() => expect(result.current.data).toEqual({ n: 1 }));
+    fail = true;
+    act(() => result.current.refetch());
+
+    await waitFor(() => expect(result.current.error?.message).toBe("boom"));
+    expect(result.current.data).toBeNull();
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("wraps a non-Error rejection", async () => {
+    const queryFn = () => Promise.reject("nope");
+    const { result } = renderHook(() => useQuery(queryFn, true));
+
+    await waitFor(() => expect(result.current.error).toEqual(new Error("nope")));
+    expect(result.current.data).toBeNull();
+  });
+
+  it("discards a response that arrives after the parameters changed", async () => {
+    const first = deferred<string>();
+    const second = deferred<string>();
+    const { result, rerender } = renderHook(({ fn }) => useQuery(fn, true), {
+      initialProps: { fn: () => first.promise },
+    });
+
+    rerender({ fn: () => second.promise });
+    await act(async () => second.resolve("store B"));
+    expect(result.current.data).toBe("store B");
+    expect(result.current.isLoading).toBe(false);
+
+    await act(async () => first.resolve("store A"));
+    expect(result.current.data).toBe("store B");
+  });
+
+  it("discards a late failure of a superseded request", async () => {
+    const first = deferred<string>();
+    const second = deferred<string>();
+    const { result, rerender } = renderHook(({ fn }) => useQuery(fn, true), {
+      initialProps: { fn: () => first.promise },
+    });
+
+    rerender({ fn: () => second.promise });
+    await act(async () => second.resolve("store B"));
+    await act(async () => first.reject(new Error("store A failed")));
+
+    expect(result.current.data).toBe("store B");
+    expect(result.current.error).toBeNull();
+  });
+
+  it("does not fetch until ready", () => {
+    const queryFn = vi.fn(() => Promise.resolve("x"));
+    const { result } = renderHook(() => useQuery(queryFn, false));
+
+    expect(queryFn).not.toHaveBeenCalled();
+    expect(result.current.isLoading).toBe(true);
   });
 });

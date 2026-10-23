@@ -31,20 +31,24 @@ export interface MerchantOrder {
  * Sales overview statistics for one time range.
  *
  * Monetary fields (`totalRevenue`, `revenueByPeriod[].amount`) are display-formatted
- * strings in major units (e.g., `"9.99"`), counted from succeeded payments in
- * `currency` at the amount charged to buyers.
+ * strings in major units (e.g., `"9.99"`), summed over succeeded payments in `currency`
+ * at the expected amount after discounts — the total priced at checkout, not the amount
+ * the payment channel actually collected.
  */
 export interface SalesOverview {
   /** Orders created in the time range */
   totalOrders: number;
-  /** Succeeded payment revenue in `currency` as display string (e.g., `"1234.56"`); `"0"` when there is none */
+  /**
+   * Succeeded payment revenue in `currency` as display string (e.g., `"1234.56"`), at the
+   * expected amount after discounts, not the channel-collected amount; `"0"` when there is none
+   */
   totalRevenue: string;
   /** Distinct buyers with orders in the time range */
   totalCustomers: number;
   /** Currency of `totalRevenue` and `revenueByPeriod` — the `currency` option */
   currency: string;
   ordersByStatus: Array<{ status: string; count: number }>;
-  /** Revenue by period in `currency`; `amount` is a display string (e.g., `"9.99"`) */
+  /** Revenue by period in `currency`, on the same basis as `totalRevenue`; `amount` is a display string (e.g., `"9.99"`) */
   revenueByPeriod: Array<{ period: string; amount: string }>;
 }
 
@@ -72,6 +76,7 @@ export interface MerchantSubscription {
   createdAt: string;
 }
 
+/** Options for {@link useMerchantOrders}. */
 export interface MerchantOrdersOptions {
   /** Store ID to filter by */
   storeId: string;
@@ -82,6 +87,10 @@ export interface MerchantOrdersOptions {
 /** Bucket size of {@link SalesOverview.revenueByPeriod} */
 export type MerchantSalesGranularity = "DAY" | "WEEK" | "MONTH" | "QUARTER" | "YEAR" | "ALL_TIME";
 
+/**
+ * Options for {@link useMerchantSales}: the store, the time range and the currency revenue
+ * is reported in. Changing any of them refetches.
+ */
 export interface MerchantSalesOptions {
   /** Store ID */
   storeId: string;
@@ -167,7 +176,8 @@ interface SalesQueryData {
 /**
  * Fetch the sales overview of a store for one time range.
  *
- * Revenue counts succeeded payments in `currency`, at the amount charged to buyers.
+ * Revenue counts succeeded payments in `currency`, at the expected amount after discounts
+ * (not the amount the payment channel actually collected).
  * `data` stays `null` when the server returns no statistics; GraphQL errors surface
  * as `error` with the server's message.
  *
