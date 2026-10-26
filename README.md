@@ -98,7 +98,7 @@ import { CheckoutButton } from "@waffo/pancake-nextjs";
 </CheckoutButton>
 ```
 
-Add `discountCode` to apply a coupon code or promotion code on the product page, for one-time and subscription products. It is sent as `discount_code`; the code is applied and locked, so the customer sees the discount but cannot change or remove it. Without `discountCode`, the product page shows a code entry field. On a subscription the coupon's duration decides how many billing periods are discounted — a free trial uses no discount, and it starts with the first paid period; a paid trial is discounted and counts as the first period. A product link never starts a plan change; for discounts on plan changes, see [Plan Change Links](#plan-change-links).
+Add `discountCode` to apply a coupon code or promotion code on the product page, for one-time and subscription products. It is sent as `discount_code`; the code is applied and locked, so the customer sees the discount but cannot change or remove it. Without `discountCode`, the product page shows a code entry field only when the store has a coupon or promotion code that can be used on the product — see [Code Entry Field](https://docs.waffo.ai/guides/discounts#code-entry-field). On a subscription the coupon's duration decides how many billing periods are discounted — a free trial uses no discount, and it starts with the first paid period; a paid trial is discounted and counts as the first period. A product link never starts a plan change; for discounts on plan changes, see [Plan Change Links](#plan-change-links).
 
 ```tsx
 <CheckoutButton type="link" storeSlug="my-store" productId="PROD_xxx" currency="USD" discountCode="SPRING-20">
@@ -326,7 +326,7 @@ export async function upgradeWithCredit(originOrderId: string) {
 }
 ```
 
-- `allowPromotionCodes` passes through to show a code entry field on the confirmation page; `couponId` and `promotionCode` are stripped, as on a new purchase — set them from your own server code with `@waffo/pancake-ts`. A coupon or code replaces the subscription's current discount; without one, the current discount carries over to the new plan with the periods already used, unless it has no periods left, its coupon's `redeemBy` is within 60 seconds, or the coupon is deactivated — then the new plan is charged the full price. See [Discounts](https://docs.waffo.ai/guides/discounts#plan-changes).
+- `allowPromotionCodes` passes through to show a code entry field on the confirmation page; without it, the page shows none (the action signs with your API Key). `couponId` and `promotionCode` are stripped, as on a new purchase — set them from your own server code with `@waffo/pancake-ts`. A coupon or code replaces the subscription's current discount; without one, the current discount carries over to the new plan with the periods already used, unless it has no periods left, its coupon's `redeemBy` is within 60 seconds, or the coupon is deactivated — then the new plan is charged the full price. See [Discounts](https://docs.waffo.ai/guides/discounts#plan-changes).
 - There is no anonymous plan change: a Store Slug session has no subscription to attribute the change to, and the platform answers 403.
 - To let customers start a change themselves, switch on `selfServicePlanChange` on the product group, then call the customer session action — that path is the only one the switch gates:
 
@@ -339,7 +339,7 @@ const session = await customerAction(customerToken, "createPlanChangeSession", {
 });
 ```
 
-The customer path has three preconditions, each answered with 403: the subscription belongs to that customer, the target plan is in the **same product group**, and that group's `selfServicePlanChange` is on. Its params carry none of the merchant-only pricing fields — the platform drops them on this path without saying so. See [Idempotency](#idempotency) for retry safety.
+The customer path has three preconditions, each answered with 403: the subscription belongs to that customer, the target plan is in the **same product group**, and that group's `selfServicePlanChange` is on. Its params carry none of the merchant-only pricing fields — the platform drops them on this path without saying so. Without `allowPromotionCodes`, its confirmation page shows a code entry field only when the store has a coupon or promotion code that can be used on the new plan's product — the same check as a product link (see [Code Entry Field](https://docs.waffo.ai/guides/discounts#code-entry-field)). See [Idempotency](#idempotency) for retry safety.
 
 ### Navigation Modes
 
