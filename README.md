@@ -98,6 +98,14 @@ import { CheckoutButton } from "@waffo/pancake-nextjs";
 </CheckoutButton>
 ```
 
+Add `discountCode` to apply a coupon code or promotion code on the product page, for one-time and subscription products. It is sent as `discount_code`; the code is applied and locked, so the customer sees the discount but cannot change or remove it. Without `discountCode`, the product page shows a code entry field only when the store has a coupon or promotion code that can be used on the product — see [Code Entry Field](https://docs.waffo.ai/guides/discounts#code-entry-field). On a subscription the coupon's duration decides how many billing periods are discounted — a free trial uses no discount, and it starts with the first paid period; a paid trial is discounted and counts as the first period. A product link never starts a plan change; for discounts on plan changes, see [Plan Change Links](#plan-change-links).
+
+```tsx
+<CheckoutButton type="link" storeSlug="my-store" productId="PROD_xxx" currency="USD" discountCode="SPRING-20">
+  Buy Now — 20% off
+</CheckoutButton>
+```
+
 ### Anonymous Checkout
 
 Creates a checkout session via server action, then redirects:
@@ -111,14 +119,9 @@ import { checkout } from "./lib/waffo";
   Buy Now
 </CheckoutButton>
 
-// Dynamic pricing — override with a coupon or volume discount
-<CheckoutButton action={checkout} productId="PROD_xxx" currency="USD" priceSnapshot={{ amount: "19.99", taxCategory: "digital_goods" }}>
-  Buy Now — $19.99 (20% off)
-</CheckoutButton>
-
-// Subscription with trial control + billing pre-fill
-<CheckoutButton action={checkout} productId="PROD_xxx" currency="USD" withTrial={true} billingDetail={{ country: "JP", isBusiness: false }}>
-  Start Free Trial
+// Billing pre-fill
+<CheckoutButton action={checkout} productId="PROD_xxx" currency="USD" billingDetail={{ country: "JP", isBusiness: false }}>
+  Buy Now
 </CheckoutButton>
 
 // Set the default checkout language (IETF BCP 47) — the customer can still switch on the page
@@ -134,6 +137,66 @@ import { checkout } from "./lib/waffo";
 
 Pass an optional `orderMerchantExternalId` to attach your internal order reference — see [Business-Side Identifiers](#business-side-identifiers).
 
+#### Custom Price and Trial
+
+`priceSnapshot` (a custom price) and `withTrial` (whether the subscription starts with its trial) cannot be set from the browser either: the server action strips them on every flow, like `couponId` and `promotionCode` (see [Discounts](#discounts)), and the props reject them at compile time. Both are signed with your API Key, so forwarding them would let a customer pick their own price or skip your trial rules. Set them in your own server code with `@waffo/pancake-ts`:
+
+```ts
+// app/actions/custom-price-checkout.ts
+"use server";
+import { WaffoPancake } from "@waffo/pancake-ts";
+
+const client = new WaffoPancake({ merchantId: process.env.WAFFO_MERCHANT_ID!, privateKey: process.env.WAFFO_PRIVATE_KEY! });
+
+export async function upgradeCheckout() {
+  const user = await requireUser(); // your own session check
+  const price = await priceFor(user); // your own pricing — never a value sent by the browser
+  const { checkoutUrl } = await client.checkout.authenticated.create({
+    productId: "PROD_xxx",
+    currency: "USD",
+    buyerIdentity: user.id,
+    priceSnapshot: { amount: price, taxCategory: "saas" },
+    withTrial: false, // skip the trial for this customer
+  });
+  return checkoutUrl;
+}
+```
+
+Call it from a button with `onClick={async () => (window.location.href = await upgradeCheckout())}`.
+
+#### Discounts
+
+Pass `allowPromotionCodes` to show a code entry field on the checkout page (sessions created through the server action default to no field). The server action forwards it to the platform, which checks every code the customer enters.
+
+```tsx
+<CheckoutButton action={checkout} productId="PROD_xxx" currency="USD" allowPromotionCodes>
+  Buy Now
+</CheckoutButton>
+```
+
+`couponId` and `promotionCode` cannot be set from the browser. A Server Action is callable with any arguments and `createCheckoutAction` signs with your API Key, so a customer could otherwise apply any of your coupons, or prefill any promotion code as if you had chosen it, on their own purchase: the action strips `couponId` and `promotionCode` on every flow, plan changes included. To apply a coupon the customer cannot change, or prefill a promotion code, decide who is entitled to it in your own server code and call `@waffo/pancake-ts` there:
+
+```ts
+// app/actions/vip-checkout.ts
+"use server";
+import { WaffoPancake } from "@waffo/pancake-ts";
+
+const client = new WaffoPancake({ merchantId: process.env.WAFFO_MERCHANT_ID!, privateKey: process.env.WAFFO_PRIVATE_KEY! });
+
+export async function vipCheckout() {
+  const user = await requireVipUser(); // your own session check
+  const { checkoutUrl } = await client.checkout.authenticated.create({
+    productId: "PROD_xxx",
+    currency: "USD",
+    buyerIdentity: user.id,
+    couponId: "CPN_xxx",
+  });
+  return checkoutUrl;
+}
+```
+
+Build that call from your own fields — do not spread parameters received from the browser into a server-side call that sets `couponId` or `promotionCode`. A browser-supplied `allowPromotionCodes` would ride along: `couponId` together with `promotionCode` or `allowPromotionCodes` (either value) is rejected locally by the SDK with a 400 before any request is sent, and `allowPromotionCodes: true` next to your `promotionCode` would let the customer change or remove it.
+
 ### Authenticated Checkout (Recommended)
 
 Creates a session **and** a token bound to the customer you provide. `buyerIdentity` is for order attribution and trial tracking — it is not rendered on the checkout page. To pre-fill the email field on the checkout form, pass `buyerEmail` explicitly.
@@ -147,7 +210,7 @@ import { checkout } from "./lib/waffo";
   Upgrade to Pro
 </CheckoutButton>
 
-// Dynamic pricing + popup mode + email pre-fill
+// Popup mode + email pre-fill
 <CheckoutButton
   type="authenticated"
   action={checkout}
@@ -155,14 +218,13 @@ import { checkout } from "./lib/waffo";
   currency="USD"
   buyerIdentity={user.id}
   buyerEmail={user.email}
-  priceSnapshot={{ amount: "7.99", taxCategory: "saas" }}
   mode="popup"
   loadingChildren="Opening checkout..."
 >
-  Upgrade — $7.99/mo
+  Upgrade to Pro
 </CheckoutButton>
 
-// Full pre-fill — identity + email + billing + skip trial + your internal order ref
+// Full pre-fill — identity + email + billing + your internal order ref
 <CheckoutButton
   type="authenticated"
   action={checkout}
@@ -171,13 +233,14 @@ import { checkout } from "./lib/waffo";
   buyerIdentity={user.id}
   buyerEmail={user.email}
   billingDetail={{ country: "US", isBusiness: true, state: "CA" }}
-  withTrial={false}
   successUrl="https://example.com/dashboard?upgraded=true"
   orderMerchantExternalId={internalOrderId} // optional, see Business-Side Identifiers below
 >
-  Skip Trial, Start Now
+  Start Now
 </CheckoutButton>
 ```
+
+A custom price (`priceSnapshot`) or skipping the trial (`withTrial`) is set from your own server code — see [Custom Price and Trial](#custom-price-and-trial).
 
 ### useCheckout Hook
 
@@ -229,7 +292,6 @@ const session = await checkout({
   productId: "PROD_target_plan", // the plan to switch to
   currency: "USD",
   changeTiming: ChangeTiming.Immediate, // omit to let the platform derive it
-  changeCreditAmount: "8.00", // "credit this much" — or changeAmount, never both
 });
 redirect(session.checkoutUrl);
 
@@ -243,7 +305,28 @@ const authed = await checkout({
 });
 ```
 
-- `changeAmount` sets what you charge for this period, `changeCreditAmount` how much you credit against it — same unit and tax basis, opposite meaning, mutually exclusive, and sending both is rejected with a 400.
+- `changeAmount`, `changeCreditAmount`, `withTrial` and `priceSnapshot` are stripped, like `couponId` and `promotionCode`: the action signs with your API Key, so a value sent from the browser would set the charge or credit for the change. To set the amount, call `@waffo/pancake-ts` from your own server code — `changeAmount` sets what you charge for this period, `changeCreditAmount` how much you credit against it (same unit and tax basis, opposite meaning, mutually exclusive; sending both is rejected with a 400):
+
+```ts
+"use server";
+import { ChangeTiming, WaffoPancake } from "@waffo/pancake-ts";
+
+const client = new WaffoPancake({ merchantId: process.env.WAFFO_MERCHANT_ID!, privateKey: process.env.WAFFO_PRIVATE_KEY! });
+
+export async function upgradeWithCredit(originOrderId: string) {
+  await requireOwner(originOrderId); // your own session check
+  const { checkoutUrl } = await client.checkout.createPlanChangeSession({
+    originOrderId,
+    productId: "PROD_target_plan",
+    currency: "USD",
+    changeTiming: ChangeTiming.Immediate,
+    changeCreditAmount: "8.00", // computed on your server — or changeAmount, never both
+  });
+  return checkoutUrl;
+}
+```
+
+- `allowPromotionCodes` passes through to show a code entry field on the confirmation page; without it, the page shows none (the action signs with your API Key). `couponId` and `promotionCode` are stripped, as on a new purchase — set them from your own server code with `@waffo/pancake-ts`. A coupon or code replaces the subscription's current discount; without one, the current discount carries over to the new plan with the periods already used, unless it has no periods left, its coupon's `redeemBy` is within 60 seconds, or the coupon is deactivated — then the new plan is charged the full price. See [Discounts](https://docs.waffo.ai/guides/discounts#plan-changes).
 - There is no anonymous plan change: a Store Slug session has no subscription to attribute the change to, and the platform answers 403.
 - To let customers start a change themselves, switch on `selfServicePlanChange` on the product group, then call the customer session action — that path is the only one the switch gates:
 
@@ -256,7 +339,7 @@ const session = await customerAction(customerToken, "createPlanChangeSession", {
 });
 ```
 
-The customer path has three preconditions, each answered with 403: the subscription belongs to that customer, the target plan is in the **same product group**, and that group's `selfServicePlanChange` is on. Its params carry none of the merchant-only pricing fields — the platform drops them on this path without saying so. See [Idempotency](#idempotency) for retry safety.
+The customer path has three preconditions, each answered with 403: the subscription belongs to that customer, the target plan is in the **same product group**, and that group's `selfServicePlanChange` is on. Its params carry none of the merchant-only pricing fields — the platform drops them on this path without saying so. Without `allowPromotionCodes`, its confirmation page shows a code entry field only when the store has a coupon or promotion code that can be used on the new plan's product — the same check as a product link (see [Code Entry Field](https://docs.waffo.ai/guides/discounts#code-entry-field)). See [Idempotency](#idempotency) for retry safety.
 
 ### Navigation Modes
 
@@ -329,12 +412,14 @@ export default function AccountLayout({ user }: { user: { email: string } }) {
 
 // All hooks work without passing token or client
 function AccountPage() {
-  const { data: orders, isLoading, refetch } = useCustomerOrders();
-  const { data: payments } = useCustomerPayments();
+  // Order lists need the store: pass storeId or storeSlug, or they come back empty
+  const { data: orders, isLoading, error, refetch } = useCustomerOrders({ storeId: "STO_xxx" });
+  const { data: payments } = useCustomerPayments({ storeId: "STO_xxx" });
   const { data: tickets } = useCustomerRefundTickets();
   const customer = useCustomer();
 
   if (isLoading) return <p>Loading...</p>;
+  if (error) return <p>{error.message}</p>;
 
   return (
     <div>
@@ -342,7 +427,7 @@ function AccountPage() {
       {orders?.subscriptionOrders.map((sub) => (
         <div key={sub.id}>
           <p>
-            {sub.product?.name} — {sub.status}
+            {sub.productVersion?.name} — {sub.status}
           </p>
           {sub.status === "active" && <button onClick={() => customer.cancelSubscription.execute({ orderId: sub.id })}>Cancel</button>}
           {sub.status === "canceling" && (
@@ -354,7 +439,7 @@ function AccountPage() {
       {/* Order history */}
       {orders?.onetimeOrders.map((order) => (
         <p key={order.id}>
-          {order.product?.name} — {order.status}
+          {order.productVersion?.name} — {order.status}
         </p>
       ))}
 
@@ -377,14 +462,16 @@ function AccountPage() {
 
 ### Customer Hooks
 
-| Hook                         | Returns                                                                                                                     |     Auto-fetches?      |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------- | :--------------------: |
-| `useCustomer()`              | `cancelSubscription`, `cancelOnetimeOrder`, `reactivateSubscription`, `createRefundTicket`, `resubmitRefundTicket`, `query` | No — call `.execute()` |
-| `useCustomerOrders()`        | `{ onetimeOrders, subscriptionOrders }` with product, payments, billing cycle                                               |          Yes           |
-| `useCustomerPayments()`      | Payment records — amount, status, failure reason                                                                            |          Yes           |
-| `useCustomerRefundTickets()` | Refund tickets — status, reason, amount                                                                                     |          Yes           |
+| Hook                                          | Returns                                                                                                                     |     Auto-fetches?      |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | :--------------------: |
+| `useCustomer()`                               | `cancelSubscription`, `cancelOnetimeOrder`, `reactivateSubscription`, `createRefundTicket`, `resubmitRefundTicket`, `query` | No — call `.execute()` |
+| `useCustomerOrders({ storeId \| storeSlug })` | `{ onetimeOrders, subscriptionOrders }` with product version, payments, billing cycle                                       |          Yes           |
+| `useCustomerPayments({ storeId? })`           | Payment records — `amount` (`{ amount, currency, display }`), status, failure reason                                        |          Yes           |
+| `useCustomerRefundTickets()`                  | Refund tickets — status, reason, amount                                                                                     |          Yes           |
 
-Action hooks return `{ execute, isLoading, error, data }`. Data hooks return `{ data, isLoading, error, refetch }`.
+`useCustomerOrders` must be given `storeId` or `storeSlug`: the order lists only return orders of the store you name, and without one both lists are empty. `useCustomerPayments` takes an optional `storeId` to limit payments to one store. The product name is on `productVersion.name` (with `productId` and `versionNumber`); a subscription's cancellation time is `canceledAt`.
+
+Action hooks return `{ execute, isLoading, error, data }`. Data hooks return `{ data, isLoading, error, refetch }`; a GraphQL error from the server lands in `error`, with the server's message.
 
 ## Customer Portal (SSO)
 
@@ -484,7 +571,7 @@ const result = await customer.query({
 
 ## Merchant Data
 
-Pre-built hooks for merchant dashboards. Pass a server action and store ID:
+Pre-built hooks for merchant dashboards. Pass a server action and store ID; the sales overview also takes a time range and the currency revenue is reported in:
 
 ```tsx
 import { useMerchantSales, useMerchantOrders, useMerchantSubscriptions } from "@waffo/pancake-nextjs";
@@ -492,27 +579,33 @@ import { merchantQuery } from "./lib/waffo";
 
 function Dashboard() {
   const storeId = "STO_xxx";
-  const { data: sales } = useMerchantSales(merchantQuery, storeId);
+  const { data: sales } = useMerchantSales(merchantQuery, {
+    storeId,
+    startDate: "2026-10-01", // inclusive, ISO 8601
+    endDate: "2026-11-01", // exclusive
+    currency: "USD",
+    granularity: "WEEK", // revenueByPeriod buckets; default "DAY"
+  });
   const { data: orders, refetch } = useMerchantOrders(merchantQuery, { storeId, limit: 10 });
   const { data: subs } = useMerchantSubscriptions(merchantQuery, storeId);
 
   // sales: { totalRevenue, totalOrders, totalCustomers, currency, ordersByStatus, revenueByPeriod }
-  // orders: { onetimeOrders, subscriptionOrders } — each with product, payments, testMode
+  // orders: { onetimeOrders, subscriptionOrders } — each with productVersion, payments (amount), testMode
   // subs: { activeCount, cancelingCount, pastDueCount, totalCount, subscriptions }
 }
 ```
 
-All merchant hooks return `{ data, isLoading, error, refetch }`.
+All merchant hooks return `{ data, isLoading, error, refetch }`; a GraphQL error from the server lands in `error`, with the server's message, and `data` is `null`. When the options change, only the response to the latest request is kept. `totalRevenue` and `revenueByPeriod[].amount` are display strings summed over succeeded payments in `currency`, at the expected amount after discounts — the total priced at checkout, not the amount the payment channel actually collected.
 
 ## Server Actions
 
-| Factory                                         | Returns                      | Description                                                                                                                                      |
-| ----------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `createCheckoutAction(config)`                  | `CheckoutAction`             | Checkout session creation (anonymous + authenticated) and plan change links (`planChange` + `authenticatedPlanChange`)                           |
-| `createCustomerTokenAction(config)`             | `CustomerTokenAction`        | Customer session token issuance                                                                                                                  |
-| `createCustomerPortalRedirect(config, options)` | `CustomerPortalRouteHandler` | GET Route Handler: 302 to the customer portal for the customer your session resolver returns — see [Customer Portal (SSO)](#customer-portal-sso) |
-| `createCustomerSessionAction(config)`           | `CustomerSessionAction`      | Customer self-service operations                                                                                                                 |
-| `createMerchantQueryAction(config)`             | `MerchantQueryAction`        | Merchant GraphQL queries                                                                                                                         |
+| Factory                                         | Returns                      | Description                                                                                                                                                                                                                                          |
+| ----------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createCheckoutAction(config)`                  | `CheckoutAction`             | Checkout session creation (anonymous + authenticated) and plan change links (`planChange` + `authenticatedPlanChange`); strips `couponId`, `promotionCode`, `priceSnapshot`, `withTrial`, `changeAmount`, `changeCreditAmount` sent from the browser |
+| `createCustomerTokenAction(config)`             | `CustomerTokenAction`        | Customer session token issuance                                                                                                                                                                                                                      |
+| `createCustomerPortalRedirect(config, options)` | `CustomerPortalRouteHandler` | GET Route Handler: 302 to the customer portal for the customer your session resolver returns — see [Customer Portal (SSO)](#customer-portal-sso)                                                                                                     |
+| `createCustomerSessionAction(config)`           | `CustomerSessionAction`      | Customer self-service operations                                                                                                                                                                                                                     |
+| `createMerchantQueryAction(config)`             | `MerchantQueryAction`        | Merchant GraphQL queries                                                                                                                                                                                                                             |
 
 Import from `@waffo/pancake-nextjs/server`. Config requires `merchantId` and `privateKey`. `createCustomerTokenAction` signs any `buyerIdentity` it receives: call it only with identity from your own session, never as an unauthenticated portal or sign-in entry.
 

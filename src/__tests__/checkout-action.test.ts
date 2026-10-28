@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { createCheckoutAction, createCustomerSessionAction } from "../server.js";
 
+import type { CheckoutActionParams } from "../server.js";
+import type { AnonymousCheckoutProps, AuthenticatedCheckoutProps } from "../types.js";
+
 const anonymousCreate = vi.fn().mockResolvedValue({ sessionId: "cs_anon", checkoutUrl: "https://x/checkout/cs_anon", expiresAt: "z" });
 const authenticatedCreate = vi
   .fn()
@@ -59,16 +62,14 @@ describe("createCheckoutAction", () => {
       originOrderId: "ORD_xxx",
       productId: "PROD_target",
       currency: "USD",
-      changeCreditAmount: "8.00",
     });
 
-    // `type` is stripped, every plan change field is forwarded untouched
+    // `type` is stripped, the plan change fields are forwarded untouched
     expect(createPlanChangeSession).toHaveBeenCalledWith(
       {
         originOrderId: "ORD_xxx",
         productId: "PROD_target",
         currency: "USD",
-        changeCreditAmount: "8.00",
       },
       undefined,
     );
@@ -138,6 +139,230 @@ describe("createCustomerSessionAction", () => {
       // @ts-expect-error — not a member of CustomerSessionActionType
       customerAction("customer.jwt", "changePlanWithDiscount", {}),
     ).rejects.toThrow(/Unknown customer action/);
+  });
+});
+
+describe("discount params from the browser", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  /** What a browser can send to the Server Action, bypassing the TypeScript types. */
+  const fromBrowser = (params: Record<string, unknown>) => params as unknown as CheckoutActionParams;
+
+  it("should strip couponId on anonymous and authenticated checkout", async () => {
+    const checkout = createCheckoutAction(CONFIG);
+
+    await checkout(fromBrowser({ productId: "PROD_xxx", currency: "USD", couponId: "CPN_xxx" }));
+    await checkout(
+      fromBrowser({ type: "authenticated", productId: "PROD_xxx", currency: "USD", buyerIdentity: "user-1", couponId: "CPN_xxx" }),
+    );
+
+    expect(anonymousCreate).toHaveBeenCalledWith({ productId: "PROD_xxx", currency: "USD" }, undefined);
+    expect(authenticatedCreate).toHaveBeenCalledWith({ productId: "PROD_xxx", currency: "USD", buyerIdentity: "user-1" }, undefined);
+  });
+
+  it("should strip couponId on plan change flows too", async () => {
+    const checkout = createCheckoutAction(CONFIG);
+    const change = { originOrderId: "ORD_xxx", productId: "PROD_target", currency: "USD", couponId: "CPN_xxx" };
+
+    await checkout(fromBrowser({ type: "planChange", ...change }));
+    await checkout(fromBrowser({ type: "authenticatedPlanChange", buyerIdentity: "user-1", ...change }));
+
+    expect(createPlanChangeSession).toHaveBeenCalledWith(
+      { originOrderId: "ORD_xxx", productId: "PROD_target", currency: "USD" },
+      undefined,
+    );
+    expect(authenticatedPlanChange).toHaveBeenCalledWith(
+      { originOrderId: "ORD_xxx", productId: "PROD_target", currency: "USD", buyerIdentity: "user-1" },
+      undefined,
+    );
+  });
+
+  it("should forward allowPromotionCodes", async () => {
+    const checkout = createCheckoutAction(CONFIG);
+
+    await checkout(fromBrowser({ productId: "PROD_xxx", currency: "USD", allowPromotionCodes: true }));
+    await checkout(
+      fromBrowser({ type: "authenticated", productId: "PROD_xxx", currency: "USD", buyerIdentity: "user-1", allowPromotionCodes: true }),
+    );
+
+    expect(anonymousCreate).toHaveBeenCalledWith({ productId: "PROD_xxx", currency: "USD", allowPromotionCodes: true }, undefined);
+    expect(authenticatedCreate).toHaveBeenCalledWith(
+      { productId: "PROD_xxx", currency: "USD", buyerIdentity: "user-1", allowPromotionCodes: true },
+      undefined,
+    );
+  });
+
+  it("should strip promotionCode on anonymous and authenticated checkout", async () => {
+    const checkout = createCheckoutAction(CONFIG);
+
+    await checkout(fromBrowser({ productId: "PROD_xxx", currency: "USD", promotionCode: "SPRING-20", allowPromotionCodes: true }));
+    await checkout(
+      fromBrowser({ type: "authenticated", productId: "PROD_xxx", currency: "USD", buyerIdentity: "user-1", promotionCode: "SPRING-20" }),
+    );
+
+    // allowPromotionCodes still rides along — only the merchant-chosen code is dropped
+    expect(anonymousCreate).toHaveBeenCalledWith({ productId: "PROD_xxx", currency: "USD", allowPromotionCodes: true }, undefined);
+    expect(authenticatedCreate).toHaveBeenCalledWith({ productId: "PROD_xxx", currency: "USD", buyerIdentity: "user-1" }, undefined);
+  });
+
+  it("should strip promotionCode and couponId on plan change flows, forwarding allowPromotionCodes", async () => {
+    const checkout = createCheckoutAction(CONFIG);
+    const change = {
+      originOrderId: "ORD_xxx",
+      productId: "PROD_target",
+      currency: "USD",
+      couponId: "CPN_xxx",
+      promotionCode: "SPRING-20",
+      allowPromotionCodes: true,
+    };
+
+    await checkout(fromBrowser({ type: "planChange", ...change }));
+    await checkout(fromBrowser({ type: "authenticatedPlanChange", buyerIdentity: "user-1", ...change }));
+
+    expect(createPlanChangeSession).toHaveBeenCalledWith(
+      { originOrderId: "ORD_xxx", productId: "PROD_target", currency: "USD", allowPromotionCodes: true },
+      undefined,
+    );
+    expect(authenticatedPlanChange).toHaveBeenCalledWith(
+      { originOrderId: "ORD_xxx", productId: "PROD_target", currency: "USD", buyerIdentity: "user-1", allowPromotionCodes: true },
+      undefined,
+    );
+  });
+
+  it("should keep couponId and promotionCode off CheckoutActionParams", () => {
+    // @ts-expect-error — couponId is not part of the server action params
+    const params: CheckoutActionParams = { productId: "PROD_xxx", currency: "USD", couponId: "CPN_xxx" };
+    // @ts-expect-error — promotionCode is not part of the server action params
+    const withCode: CheckoutActionParams = { productId: "PROD_xxx", currency: "USD", promotionCode: "SPRING-20" };
+    const change: CheckoutActionParams = {
+      type: "planChange",
+      originOrderId: "ORD_xxx",
+      productId: "PROD_target",
+      currency: "USD",
+      // @ts-expect-error — couponId is not part of the plan change server action params
+      couponId: "CPN_xxx",
+    };
+    expect([params, withCode, change]).toHaveLength(3);
+  });
+});
+
+describe("price and trial params from the browser", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  /** What a browser can send to the Server Action, bypassing the TypeScript types. */
+  const fromBrowser = (params: Record<string, unknown>) => params as unknown as CheckoutActionParams;
+
+  /** Every merchant-only pricing field a browser could try to smuggle in. */
+  const PRICING = {
+    priceSnapshot: { amount: "0.01", taxCategory: "saas" },
+    withTrial: true,
+    changeAmount: "0.01",
+    changeCreditAmount: "999.00",
+  };
+
+  it("should strip priceSnapshot, withTrial, changeAmount and changeCreditAmount on anonymous and authenticated checkout", async () => {
+    const checkout = createCheckoutAction(CONFIG);
+
+    await checkout(fromBrowser({ productId: "PROD_xxx", currency: "USD", ...PRICING }));
+    await checkout(fromBrowser({ type: "authenticated", productId: "PROD_xxx", currency: "USD", buyerIdentity: "user-1", ...PRICING }));
+
+    expect(anonymousCreate).toHaveBeenCalledWith({ productId: "PROD_xxx", currency: "USD" }, undefined);
+    expect(authenticatedCreate).toHaveBeenCalledWith({ productId: "PROD_xxx", currency: "USD", buyerIdentity: "user-1" }, undefined);
+  });
+
+  it("should strip priceSnapshot, withTrial, changeAmount and changeCreditAmount on plan change flows", async () => {
+    const checkout = createCheckoutAction(CONFIG);
+    const change = { originOrderId: "ORD_xxx", productId: "PROD_target", currency: "USD", allowPromotionCodes: true, ...PRICING };
+
+    await checkout(fromBrowser({ type: "planChange", ...change }));
+    await checkout(fromBrowser({ type: "authenticatedPlanChange", buyerIdentity: "user-1", ...change }));
+
+    expect(createPlanChangeSession).toHaveBeenCalledWith(
+      { originOrderId: "ORD_xxx", productId: "PROD_target", currency: "USD", allowPromotionCodes: true },
+      undefined,
+    );
+    expect(authenticatedPlanChange).toHaveBeenCalledWith(
+      { originOrderId: "ORD_xxx", productId: "PROD_target", currency: "USD", buyerIdentity: "user-1", allowPromotionCodes: true },
+      undefined,
+    );
+  });
+
+  it("should not modify the params object it receives", async () => {
+    const checkout = createCheckoutAction(CONFIG);
+    const raw = { productId: "PROD_xxx", currency: "USD", ...PRICING };
+
+    await checkout(fromBrowser(raw));
+
+    expect(raw).toEqual({ productId: "PROD_xxx", currency: "USD", ...PRICING });
+  });
+
+  it("should keep the pricing fields off every CheckoutActionParams shape", () => {
+    const anonymous: CheckoutActionParams = {
+      productId: "PROD_xxx",
+      currency: "USD",
+      // @ts-expect-error — priceSnapshot is merchant-only
+      priceSnapshot: { amount: "19.99", taxCategory: "digital_goods" },
+    };
+    const authenticated: CheckoutActionParams = {
+      type: "authenticated",
+      productId: "PROD_xxx",
+      currency: "USD",
+      buyerIdentity: "user-1",
+      // @ts-expect-error — withTrial is merchant-only
+      withTrial: false,
+    };
+    const planChange: CheckoutActionParams = {
+      type: "planChange",
+      originOrderId: "ORD_xxx",
+      productId: "PROD_target",
+      currency: "USD",
+      // @ts-expect-error — changeCreditAmount is merchant-only
+      changeCreditAmount: "8.00",
+    };
+    const authenticatedPlanChange: CheckoutActionParams = {
+      type: "authenticatedPlanChange",
+      originOrderId: "ORD_xxx",
+      productId: "PROD_target",
+      currency: "USD",
+      buyerIdentity: "user-1",
+      // @ts-expect-error — changeAmount is merchant-only
+      changeAmount: "5.00",
+    };
+    const promotionOnPlanChange: CheckoutActionParams = {
+      type: "authenticatedPlanChange",
+      originOrderId: "ORD_xxx",
+      productId: "PROD_target",
+      currency: "USD",
+      buyerIdentity: "user-1",
+      // @ts-expect-error — promotionCode is merchant-only
+      promotionCode: "SPRING-20",
+    };
+    expect([anonymous, authenticated, planChange, authenticatedPlanChange, promotionOnPlanChange]).toHaveLength(5);
+  });
+
+  it("should keep priceSnapshot and withTrial off the CheckoutButton props", () => {
+    const action = createCheckoutAction(CONFIG);
+    const anonymous: AnonymousCheckoutProps = {
+      action,
+      productId: "PROD_xxx",
+      currency: "USD",
+      // @ts-expect-error — priceSnapshot is merchant-only
+      priceSnapshot: { amount: "19.99", taxCategory: "digital_goods" },
+    };
+    const authenticated: AuthenticatedCheckoutProps = {
+      type: "authenticated",
+      action,
+      productId: "PROD_xxx",
+      currency: "USD",
+      buyerIdentity: "user-1",
+      // @ts-expect-error — withTrial is merchant-only
+      withTrial: true,
+    };
+    expect([anonymous, authenticated]).toHaveLength(2);
   });
 });
 
