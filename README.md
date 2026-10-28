@@ -166,7 +166,7 @@ Call it from a button with `onClick={async () => (window.location.href = await u
 
 #### Discounts
 
-Pass `allowPromotionCodes` to show a code entry field on the checkout page (sessions created through the server action default to no field). The server action forwards it to the platform, which checks every code the customer enters.
+Pass `allowPromotionCodes` to show (`true`) or hide (`false`) a code entry field on the checkout page; without it, the field is shown only if the store has a coupon or promotion code that can be redeemed on the product. The server action forwards it to the platform, which checks every code the customer enters.
 
 ```tsx
 <CheckoutButton action={checkout} productId="PROD_xxx" currency="USD" allowPromotionCodes>
@@ -326,7 +326,7 @@ export async function upgradeWithCredit(originOrderId: string) {
 }
 ```
 
-- `allowPromotionCodes` passes through to show a code entry field on the confirmation page; without it, the page shows none (the action signs with your API Key). `couponId` and `promotionCode` are stripped, as on a new purchase — set them from your own server code with `@waffo/pancake-ts`. A coupon or code replaces the subscription's current discount; without one, the current discount carries over to the new plan with the periods already used, unless it has no periods left, its coupon's `redeemBy` is within 60 seconds, or the coupon is deactivated — then the new plan is charged the full price. See [Discounts](https://docs.waffo.ai/guides/discounts#plan-changes).
+- `allowPromotionCodes` passes through to show or hide a code entry field on the confirmation page; without it, the field is shown only if the store has a coupon or promotion code that can be redeemed on the new plan's product. `couponId` and `promotionCode` are stripped, as on a new purchase — set them from your own server code with `@waffo/pancake-ts`. A coupon or code replaces the subscription's current discount; without one, the current discount carries over to the new plan with the periods already used, unless it has no periods left, its coupon's `redeemBy` is within 60 seconds, or the coupon is deactivated — then the new plan is charged the full price. See [Discounts](https://docs.waffo.ai/guides/discounts#plan-changes).
 - There is no anonymous plan change: a Store Slug session has no subscription to attribute the change to, and the platform answers 403.
 - To let customers start a change themselves, switch on `selfServicePlanChange` on the product group, then call the customer session action — that path is the only one the switch gates:
 
