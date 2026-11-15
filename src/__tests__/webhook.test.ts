@@ -106,6 +106,8 @@ describe("Webhook", () => {
       ["subscription.past_due", "onSubscriptionPastDue"],
       ["refund.succeeded", "onRefundSucceeded"],
       ["refund.failed", "onRefundFailed"],
+      ["checkout.completed", "onCheckoutCompleted"],
+      ["checkout.expired", "onCheckoutExpired"],
     ];
 
     for (const [eventType, handlerKey] of eventTypes) {
@@ -120,6 +122,46 @@ describe("Webhook", () => {
 
       expect(handlerFn).toHaveBeenCalledWith(event);
     }
+  });
+
+  it("should dispatch checkout.completed to onCheckoutCompleted only", async () => {
+    const event = {
+      eventType: "checkout.completed",
+      eventId: "cs_3f2b9c1e-7a4d-4e8b-9c21-5d6f0a1b2c3d",
+      data: { sessionId: "cs_3f2b9c1e-7a4d-4e8b-9c21-5d6f0a1b2c3d", status: "completed", orderId: "ORD_xxx" },
+    };
+    mockVerify.mockReturnValue(event as never);
+
+    const onCheckoutCompleted = vi.fn();
+    const onCheckoutExpired = vi.fn();
+    const onOrderCompleted = vi.fn();
+    const handler = Webhook({ onCheckoutCompleted, onCheckoutExpired, onOrderCompleted });
+    const response = await handler(createRequest("{}") as never);
+
+    expect(response.status).toBe(200);
+    expect(onCheckoutCompleted).toHaveBeenCalledWith(event);
+    expect(onCheckoutExpired).not.toHaveBeenCalled();
+    expect(onOrderCompleted).not.toHaveBeenCalled();
+  });
+
+  it("should dispatch checkout.expired to onCheckoutExpired only", async () => {
+    const event = {
+      eventType: "checkout.expired",
+      eventId: "cs_3f2b9c1e-7a4d-4e8b-9c21-5d6f0a1b2c3d",
+      data: { sessionId: "cs_3f2b9c1e-7a4d-4e8b-9c21-5d6f0a1b2c3d", status: "expired", orderId: null, buyerEmail: null },
+    };
+    mockVerify.mockReturnValue(event as never);
+
+    const onPayload = vi.fn();
+    const onCheckoutCompleted = vi.fn();
+    const onCheckoutExpired = vi.fn();
+    const handler = Webhook({ onPayload, onCheckoutCompleted, onCheckoutExpired });
+    const response = await handler(createRequest("{}") as never);
+
+    expect(response.status).toBe(200);
+    expect(onPayload).toHaveBeenCalledWith(event);
+    expect(onCheckoutExpired).toHaveBeenCalledWith(event);
+    expect(onCheckoutCompleted).not.toHaveBeenCalled();
   });
 
   it("should not call handler for unregistered event type", async () => {

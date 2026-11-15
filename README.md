@@ -389,7 +389,29 @@ export const POST = Webhook({
 });
 ```
 
-Returns `200` on success, `401` on invalid signature, `500` if a handler throws. Full event list: `onOrderCompleted`, `onSubscriptionActivated`, `onSubscriptionPaymentSucceeded`, `onSubscriptionRenewed`, `onSubscriptionRecovered`, `onSubscriptionPlanChanged`, `onSubscriptionPlanChangeScheduled`, `onSubscriptionPlanChangeFailed`, `onSubscriptionCanceling`, `onSubscriptionUncanceled`, `onSubscriptionCanceled`, `onSubscriptionPastDue`, `onRefundSucceeded`, `onRefundFailed`.
+Returns `200` on success, `401` on invalid signature, `500` if a handler throws. Full event list: `onOrderCompleted`, `onSubscriptionActivated`, `onSubscriptionPaymentSucceeded`, `onSubscriptionRenewed`, `onSubscriptionRecovered`, `onSubscriptionPlanChanged`, `onSubscriptionPlanChangeScheduled`, `onSubscriptionPlanChangeFailed`, `onSubscriptionCanceling`, `onSubscriptionUncanceled`, `onSubscriptionCanceled`, `onSubscriptionPastDue`, `onRefundSucceeded`, `onRefundFailed`, `onCheckoutCompleted`, `onCheckoutExpired`.
+
+### Checkout Session Events
+
+Sessions on the one-page checkout also report how the session itself ended. Each session sends at most one of these, and `event.eventId` is the checkout session ID (`cs_…`) that create-session returned:
+
+| Handler               | Event                | Fires when                                                                                                                    |
+| --------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `onCheckoutCompleted` | `checkout.completed` | The one-time order was paid or the subscription was activated — in addition to `onOrderCompleted` / `onSubscriptionActivated` |
+| `onCheckoutExpired`   | `checkout.expired`   | The session expired without completing; it may never have had an order (`event.data.orderId` is `null`)                       |
+
+A session the buyer moved back to the legacy checkout sends neither event, and legacy checkout sessions never send them.
+
+```ts
+export const POST = Webhook({
+  onCheckoutCompleted: async (event) => {
+    await markSessionCompleted(event.eventId, event.data.orderId);
+  },
+  onCheckoutExpired: async (event) => {
+    await releaseHeldSeat(event.eventId);
+  },
+});
+```
 
 ## Customer Self-Service
 

@@ -41,6 +41,23 @@ export interface WebhookConfig {
   onRefundSucceeded?: EventHandler;
   /** Refund failed */
   onRefundFailed?: EventHandler;
+  /**
+   * Checkout session completed: the one-time order was paid, or the subscription was activated.
+   *
+   * Sent only for sessions on the one-page checkout, once per session; `event.eventId` is the
+   * checkout session ID (`cs_…`) that create-session returned. Fires in addition to
+   * `onOrderCompleted` / `onSubscriptionActivated`, not instead of them. A session the buyer
+   * moved back to the legacy checkout sends neither checkout event.
+   */
+  onCheckoutCompleted?: EventHandler;
+  /**
+   * Checkout session expired without completing.
+   *
+   * Sent only for sessions on the one-page checkout, once per session; `event.eventId` is the
+   * checkout session ID (`cs_…`). The session may never have had an order, in which case
+   * `event.data.orderId` is `null` and `event.data.buyerEmail` may be `null`.
+   */
+  onCheckoutExpired?: EventHandler;
 }
 
 /* eslint-disable @typescript-eslint/naming-convention -- event type keys use dot notation */
@@ -59,6 +76,8 @@ const EVENT_HANDLER_MAP: Record<string, keyof WebhookConfig> = {
   "subscription.past_due": "onSubscriptionPastDue",
   "refund.succeeded": "onRefundSucceeded",
   "refund.failed": "onRefundFailed",
+  "checkout.completed": "onCheckoutCompleted",
+  "checkout.expired": "onCheckoutExpired",
 };
 /* eslint-enable @typescript-eslint/naming-convention */
 

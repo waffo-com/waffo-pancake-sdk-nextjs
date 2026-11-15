@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ## [Unreleased]
 
+### Added
+
+- **`onCheckoutCompleted`** (`checkout.completed`) and **`onCheckoutExpired`** (`checkout.expired`) — how a one-page checkout session ended: completed (the one-time order was paid or the subscription was activated, alongside `onOrderCompleted` / `onSubscriptionActivated`) or expired without completing. `event.eventId` is the checkout session ID (`cs_…`). Sessions moved back to the legacy checkout, and legacy checkout sessions, send neither event.
+
 ## [0.10.0] - 2026-10-27
 
 Customers can use coupon codes and promotion codes at checkout for one-time products, new subscriptions and plan changes. The built-in data hooks work against the current GraphQL schema — their return types change, see the BREAKING entries under Changed.
