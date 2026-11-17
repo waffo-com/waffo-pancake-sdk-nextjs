@@ -148,7 +148,7 @@ describe("Webhook", () => {
     const event = {
       eventType: "checkout.expired",
       eventId: "cs_3f2b9c1e-7a4d-4e8b-9c21-5d6f0a1b2c3d",
-      data: { sessionId: "cs_3f2b9c1e-7a4d-4e8b-9c21-5d6f0a1b2c3d", status: "expired", orderId: null, buyerEmail: null },
+      data: { sessionId: "cs_3f2b9c1e-7a4d-4e8b-9c21-5d6f0a1b2c3d", status: "expired", orderId: null },
     };
     mockVerify.mockReturnValue(event as never);
 

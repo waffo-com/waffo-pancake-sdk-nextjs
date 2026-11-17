@@ -55,7 +55,7 @@ export interface WebhookConfig {
    *
    * Sent only for sessions on the one-page checkout, once per session; `event.eventId` is the
    * checkout session ID (`cs_…`). The session may never have had an order, in which case
-   * `event.data.orderId` is `null` and `event.data.buyerEmail` may be `null`.
+   * `event.data.orderId` is `null`.
    */
   onCheckoutExpired?: EventHandler;
 }
