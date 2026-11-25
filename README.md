@@ -396,7 +396,16 @@ export const POST = Webhook({
 
 Returns `200` on success, `401` on invalid signature, `500` if a handler throws. Full event list: `onOrderCompleted`, `onSubscriptionActivated`, `onSubscriptionPaymentSucceeded`, `onSubscriptionRenewed`, `onSubscriptionRecovered`, `onSubscriptionPlanChanged`, `onSubscriptionPlanChangeScheduled`, `onSubscriptionPlanChangeFailed`, `onSubscriptionCanceling`, `onSubscriptionUncanceled`, `onSubscriptionCanceled`, `onSubscriptionPastDue`, `onRefundSucceeded`, `onRefundFailed`, `onChargebackFiled`, `onChargebackUpdated`, `onStoreDomainChanged`, `onCheckoutCompleted`, `onCheckoutExpired`, `onStoreDomainUnbound`, `onDisputeCreated`, `onDisputeUpdated`, `onDisputeMessageReceived`.
 
-Order, subscription, refund and chargeback handlers receive `WebhookEventData` (chargeback events add `event.data.chargeback`). The store, checkout session and dispute handlers receive their own `data` types: `WebhookStoreDomainChangedData`, `WebhookStoreDomainUnboundData`, `WebhookCheckoutSessionData` and `WebhookDisputeEventData` (`{ dispute }`), all re-exported from this package. `onPayload` is typed with `WebhookEventData`; narrow on `event.eventType` before reading the data of other events.
+Order, subscription, refund and chargeback handlers receive `WebhookEventData` (chargeback events add `event.data.chargeback`). The store, checkout session and dispute handlers receive their own `data` types: `WebhookStoreDomainChangedData`, `WebhookStoreDomainUnboundData`, `WebhookCheckoutSessionData` and `WebhookDisputeEventData` (`{ dispute }`), all re-exported from this package. `onPayload` receives every event typed as `WebhookEvent<WebhookEventData>`. The type is not a discriminated union, so checking `event.eventType` does not change the type of `event.data`: for store, checkout session and dispute events, prefer the named handler (`onDisputeCreated` etc.), or check `event.eventType` and then cast the data yourself:
+
+```ts
+onPayload: async (event) => {
+  if (event.eventType === "dispute.created") {
+    const { dispute } = event.data as unknown as WebhookDisputeEventData;
+    console.log(dispute.disputeId);
+  }
+},
+```
 
 ## Customer Self-Service
 
