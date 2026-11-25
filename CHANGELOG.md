@@ -6,6 +6,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-25
+
+`Webhook()` dispatches every event the platform delivers, including chargeback, store domain, checkout session and customer complaint (dispute) events, with typed `data` for each.
+
+### Added
+
+- **Nine `WebhookConfig` handlers** — `onChargebackFiled` (`chargeback.filed`), `onChargebackUpdated` (`chargeback.updated`), `onStoreDomainChanged` (`store.domain_changed`), `onCheckoutCompleted` (`checkout.completed`), `onCheckoutExpired` (`checkout.expired`), `onStoreDomainUnbound` (`store.domain_unbound`), `onDisputeCreated` (`dispute.created`), `onDisputeUpdated` (`dispute.updated`), `onDisputeMessageReceived` (`dispute.message_received`). With them the handlers cover all 23 webhook event types. The chargeback handlers receive `WebhookEventData` with `data.chargeback`; the store, checkout and dispute handlers receive `WebhookStoreDomainChangedData`, `WebhookStoreDomainUnboundData`, `WebhookCheckoutSessionData` and `WebhookDisputeEventData` (`{ dispute }`).
+- **Type re-exports** — `WebhookChargeback`, `WebhookCheckoutSessionData`, `WebhookDispute`, `WebhookDisputeEventData`, `WebhookDisputeMessage`, `WebhookStoreDomainChangedData`, `WebhookStoreDomainUnboundData` from `@waffo/pancake-ts`.
+
+### Changed
+
+- **Depends on `@waffo/pancake-ts` `^0.29.0`** (was `^0.27.0`), the release that adds these event types and data shapes.
+
 ## [0.10.0] - 2026-10-27
 
 Customers can use coupon codes and promotion codes at checkout for one-time products, new subscriptions and plan changes. The built-in data hooks work against the current GraphQL schema — their return types change, see the BREAKING entries under Changed.
