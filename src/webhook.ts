@@ -103,6 +103,11 @@ const EVENT_HANDLER_MAP: Record<string, keyof WebhookConfig> = {
  * Automatically verifies the webhook signature using `@waffo/pancake-ts`,
  * then dispatches to the matching event handler.
  *
+ * A delivery can arrive more than once (retries), so make handlers idempotent on
+ * `event.eventType` + `event.eventId`. Don't key on `event.id` alone: it is the entity
+ * ID, and every `dispute.*` event of one complaint carries the same `id` (`DSP_xxx`),
+ * so deduplicating on it would drop that complaint's later updates and messages.
+ *
  * @param config - Verification options and event handlers
  * @returns A Next.js POST route handler
  *
