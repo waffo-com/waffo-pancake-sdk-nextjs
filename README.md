@@ -381,6 +381,11 @@ export const POST = Webhook({
     });
     await revokeAccess(event.data.orderId);
   },
+  onDisputeCreated: async (event) => {
+    // event.data is WebhookDisputeEventData — a customer complaint from the portal or WeChat Pay
+    const { dispute } = event.data;
+    await openSupportCase(dispute.disputeId, dispute.description, dispute.respondBy);
+  },
 
   // Catch-all — fires for every event (optional)
   onPayload: async (event) => {
@@ -389,7 +394,9 @@ export const POST = Webhook({
 });
 ```
 
-Returns `200` on success, `401` on invalid signature, `500` if a handler throws. Full event list: `onOrderCompleted`, `onSubscriptionActivated`, `onSubscriptionPaymentSucceeded`, `onSubscriptionRenewed`, `onSubscriptionRecovered`, `onSubscriptionPlanChanged`, `onSubscriptionPlanChangeScheduled`, `onSubscriptionPlanChangeFailed`, `onSubscriptionCanceling`, `onSubscriptionUncanceled`, `onSubscriptionCanceled`, `onSubscriptionPastDue`, `onRefundSucceeded`, `onRefundFailed`.
+Returns `200` on success, `401` on invalid signature, `500` if a handler throws. Full event list: `onOrderCompleted`, `onSubscriptionActivated`, `onSubscriptionPaymentSucceeded`, `onSubscriptionRenewed`, `onSubscriptionRecovered`, `onSubscriptionPlanChanged`, `onSubscriptionPlanChangeScheduled`, `onSubscriptionPlanChangeFailed`, `onSubscriptionCanceling`, `onSubscriptionUncanceled`, `onSubscriptionCanceled`, `onSubscriptionPastDue`, `onRefundSucceeded`, `onRefundFailed`, `onChargebackFiled`, `onChargebackUpdated`, `onStoreDomainChanged`, `onCheckoutCompleted`, `onCheckoutExpired`, `onStoreDomainUnbound`, `onDisputeCreated`, `onDisputeUpdated`, `onDisputeMessageReceived`.
+
+Order, subscription, refund and chargeback handlers receive `WebhookEventData` (chargeback events add `event.data.chargeback`). The store, checkout session and dispute handlers receive their own `data` types: `WebhookStoreDomainChangedData`, `WebhookStoreDomainUnboundData`, `WebhookCheckoutSessionData` and `WebhookDisputeEventData` (`{ dispute }`), all re-exported from this package. `onPayload` is typed with `WebhookEventData`; narrow on `event.eventType` before reading the data of other events.
 
 ## Customer Self-Service
 

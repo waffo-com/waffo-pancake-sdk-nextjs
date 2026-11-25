@@ -1,6 +1,14 @@
 import { verifyWebhook } from "@waffo/pancake-ts";
 
-import type { VerifyWebhookOptions, WebhookEvent, WebhookEventData } from "@waffo/pancake-ts";
+import type {
+  VerifyWebhookOptions,
+  WebhookCheckoutSessionData,
+  WebhookDisputeEventData,
+  WebhookEvent,
+  WebhookEventData,
+  WebhookStoreDomainChangedData,
+  WebhookStoreDomainUnboundData,
+} from "@waffo/pancake-ts";
 
 /** Handler function for a specific webhook event */
 type EventHandler<T = WebhookEventData> = (event: WebhookEvent<T>) => void | Promise<void>;
@@ -41,6 +49,24 @@ export interface WebhookConfig {
   onRefundSucceeded?: EventHandler;
   /** Refund failed */
   onRefundFailed?: EventHandler;
+  /** New chargeback case filed against a payment, including a second-cycle case; `event.data.chargeback` describes it */
+  onChargebackFiled?: EventHandler;
+  /** Chargeback status changed; `event.data.chargeback.previousStatus` is the status before the change */
+  onChargebackUpdated?: EventHandler;
+  /** Store's verified domain replaced after review */
+  onStoreDomainChanged?: EventHandler<WebhookStoreDomainChangedData>;
+  /** Checkout session completed (one-time order paid or subscription activated) */
+  onCheckoutCompleted?: EventHandler<WebhookCheckoutSessionData>;
+  /** Checkout session expired without a successful payment */
+  onCheckoutExpired?: EventHandler<WebhookCheckoutSessionData>;
+  /** Store's domain unbound by the store owner or by Waffo */
+  onStoreDomainUnbound?: EventHandler<WebhookStoreDomainUnboundData>;
+  /** Customer complaint became visible to the merchant; `event.data.dispute` describes it */
+  onDisputeCreated?: EventHandler<WebhookDisputeEventData>;
+  /** Complaint status changed; `event.data.dispute.previousStatus` is the status before the change */
+  onDisputeUpdated?: EventHandler<WebhookDisputeEventData>;
+  /** Complaint received a new message from the customer or the payment channel; `event.data.dispute.message` is that message */
+  onDisputeMessageReceived?: EventHandler<WebhookDisputeEventData>;
 }
 
 /* eslint-disable @typescript-eslint/naming-convention -- event type keys use dot notation */
@@ -59,6 +85,15 @@ const EVENT_HANDLER_MAP: Record<string, keyof WebhookConfig> = {
   "subscription.past_due": "onSubscriptionPastDue",
   "refund.succeeded": "onRefundSucceeded",
   "refund.failed": "onRefundFailed",
+  "chargeback.filed": "onChargebackFiled",
+  "chargeback.updated": "onChargebackUpdated",
+  "store.domain_changed": "onStoreDomainChanged",
+  "checkout.completed": "onCheckoutCompleted",
+  "checkout.expired": "onCheckoutExpired",
+  "store.domain_unbound": "onStoreDomainUnbound",
+  "dispute.created": "onDisputeCreated",
+  "dispute.updated": "onDisputeUpdated",
+  "dispute.message_received": "onDisputeMessageReceived",
 };
 /* eslint-enable @typescript-eslint/naming-convention */
 
@@ -88,6 +123,10 @@ const EVENT_HANDLER_MAP: Record<string, keyof WebhookConfig> = {
  *   onRefundSucceeded: async (event) => {
  *     console.log("Refund succeeded:", event.data.refundId);
  *     // Revoke access
+ *   },
+ *   onDisputeCreated: async (event) => {
+ *     const { dispute } = event.data;
+ *     console.log("Complaint", dispute.disputeId, "respond by", dispute.respondBy);
  *   },
  * });
  * ```
